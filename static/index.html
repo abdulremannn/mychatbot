@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>My Chatbot</title>
 <style>
   :root {
@@ -19,9 +19,10 @@
     --radius-lg: 16px;
     --radius-md: 12px;
     --radius-sm: 8px;
+    --vh: 100dvh;
   }
 
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; }
 
   body {
@@ -33,7 +34,24 @@
     -webkit-font-smoothing: antialiased;
     display: flex;
     height: 100vh;
+    height: var(--vh);
     overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  button {
+    font-family: inherit;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Visible keyboard focus everywhere, mouse users only see it via :focus-visible */
+  button:focus-visible,
+  textarea:focus-visible,
+  .chat-item:focus-visible,
+  .card:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 
   /* Sidebar */
@@ -45,6 +63,8 @@
     display: flex;
     flex-direction: column;
     padding: 14px 10px;
+    padding-top: max(14px, env(safe-area-inset-top));
+    padding-left: max(10px, env(safe-area-inset-left));
   }
 
   #new-chat-btn {
@@ -60,6 +80,7 @@
     font-weight: 500;
     cursor: pointer;
     margin-bottom: 14px;
+    min-height: 40px;
     transition: background 0.12s ease, border-color 0.12s ease, transform 0.08s ease;
   }
 
@@ -75,9 +96,11 @@
   #chat-list {
     flex: 1;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     display: flex;
     flex-direction: column;
     gap: 2px;
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   .chat-item {
@@ -90,6 +113,7 @@
     font-size: 13px;
     color: var(--text-muted);
     gap: 6px;
+    min-height: 40px;
     transition: background 0.12s ease, transform 0.08s ease;
   }
 
@@ -111,6 +135,7 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     flex: 1;
+    min-width: 0;
   }
 
   .chat-delete-btn {
@@ -119,10 +144,15 @@
     color: var(--text-faint);
     cursor: pointer;
     font-size: 13px;
-    padding: 2px 5px;
+    padding: 8px;
+    margin: -8px;
     border-radius: 4px;
     display: none;
     flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    align-items: center;
+    justify-content: center;
     transition: color 0.12s ease, background 0.12s ease, transform 0.08s ease;
   }
 
@@ -131,7 +161,7 @@
   }
 
   .chat-item:hover .chat-delete-btn {
-    display: block;
+    display: flex;
   }
 
   .chat-delete-btn:hover {
@@ -145,20 +175,23 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
+    min-height: 0;
   }
 
   #topbar {
     flex-shrink: 0;
     border-bottom: 1px solid var(--border-soft);
+    padding-top: env(safe-area-inset-top);
   }
 
   #topbar-inner {
     max-width: 760px;
     margin: 0 auto;
-    padding: 16px 24px;
+    padding: 14px 16px;
     display: flex;
     align-items: center;
     gap: 10px;
+    min-width: 0;
   }
 
   #topbar-dot {
@@ -167,6 +200,7 @@
     border-radius: 50%;
     background: var(--accent);
     box-shadow: 0 0 8px var(--accent);
+    flex-shrink: 0;
   }
 
   #topbar-title {
@@ -174,6 +208,9 @@
     font-weight: 600;
     letter-spacing: 0.02em;
     color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .page {
@@ -204,6 +241,7 @@
     padding: 6px 14px;
     font-size: 12.5px;
     cursor: pointer;
+    min-height: 32px;
     transition: all 0.12s ease, transform 0.08s ease;
   }
 
@@ -225,10 +263,11 @@
   /* Greeting */
   #greeting-screen {
     padding-top: 8vh;
+    min-width: 0;
   }
 
   #greeting-screen h1 {
-    font-size: 26px;
+    font-size: clamp(19px, 5vw, 26px);
     font-weight: 600;
     letter-spacing: -0.01em;
     margin: 0 0 8px 0;
@@ -237,7 +276,7 @@
   #greeting-screen p {
     font-size: 14px;
     color: var(--text-muted);
-    margin: 0 0 28px 0;
+    margin: 0 0 24px 0;
   }
 
   .cards {
@@ -250,9 +289,10 @@
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
-    padding: 16px;
+    padding: 14px;
     cursor: pointer;
     text-align: left;
+    min-width: 0;
     transition: border-color 0.12s ease, background 0.12s ease, transform 0.1s ease;
   }
 
@@ -270,12 +310,14 @@
     font-size: 13px;
     font-weight: 600;
     margin-bottom: 4px;
+    overflow-wrap: break-word;
   }
 
   .card-desc {
     font-size: 12px;
     color: var(--text-faint);
     line-height: 1.5;
+    overflow-wrap: break-word;
   }
 
   /* Chat log */
@@ -283,6 +325,8 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -297,6 +341,7 @@
     display: flex;
     margin: 6px 0;
     animation: messageIn 0.18s ease;
+    min-width: 0;
   }
 
   @keyframes messageIn {
@@ -311,6 +356,8 @@
     border-radius: var(--radius-md);
     max-width: 75%;
     white-space: pre-wrap;
+    overflow-wrap: break-word;
+    word-break: break-word;
     line-height: 1.55;
     font-size: 14.5px;
   }
@@ -343,10 +390,17 @@
     50% { opacity: 1; }
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    .row { animation: none; }
+    .bot-msg.empty::after { animation: none; opacity: 0.6; }
+    * { transition-duration: 0.01ms !important; }
+  }
+
   /* Input bar */
   #input-wrap {
     flex-shrink: 0;
-    padding: 14px 0 22px 0;
+    padding: 14px 0 16px 0;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
   }
 
   #input-area {
@@ -356,7 +410,7 @@
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    padding: 10px 10px 10px 16px;
+    padding: 8px 8px 8px 16px;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
 
@@ -373,17 +427,19 @@
     resize: none;
     color: var(--text);
     font-family: inherit;
-    font-size: 14.5px;
+    /* 16px minimum prevents iOS Safari from auto-zooming on focus */
+    font-size: 16px;
     line-height: 1.5;
-    padding: 6px 0;
+    padding: 8px 0;
     max-height: 160px;
+    min-width: 0;
   }
 
   #user-input::placeholder { color: var(--text-faint); }
 
   #send-btn {
-    width: 32px;
-    height: 32px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     border: none;
     background: var(--accent);
@@ -393,6 +449,7 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    font-size: 16px;
     transition: background 0.12s ease, opacity 0.12s ease, transform 0.08s ease;
   }
 
@@ -404,7 +461,7 @@
     text-align: center;
     font-size: 11px;
     color: var(--text-faint);
-    padding-bottom: 16px;
+    padding-top: 10px;
   }
 
   /* Mobile drawer */
@@ -415,14 +472,18 @@
     color: var(--text);
     font-size: 18px;
     cursor: pointer;
-    padding: 4px 6px;
+    width: 36px;
+    height: 36px;
     margin-right: 2px;
+    margin-left: -6px;
     border-radius: 6px;
+    flex-shrink: 0;
     transition: background 0.12s ease, transform 0.08s ease;
   }
 
   #menu-btn:active {
     transform: scale(0.9);
+    background: var(--panel);
   }
 
   #sidebar-overlay {
@@ -444,8 +505,7 @@
       z-index: 50;
       transform: translateX(-100%);
       transition: transform 0.2s ease;
-      width: 78vw;
-      max-width: 280px;
+      width: min(78vw, 280px);
       box-shadow: 2px 0 24px rgba(0,0,0,0.4);
     }
 
@@ -465,56 +525,76 @@
       padding: 0 14px;
     }
 
-    #topbar-inner {
-      padding: 14px 14px;
-    }
-
     .cards {
       grid-template-columns: 1fr;
     }
 
     #greeting-screen {
-      padding-top: 6vh;
-    }
-
-    #greeting-screen h1 {
-      font-size: 21px;
+      padding-top: 5vh;
     }
 
     .msg {
-      max-width: 86%;
+      max-width: 88%;
       font-size: 14px;
     }
 
     #persona-picker {
       gap: 6px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 2px;
+      margin: 14px -14px 0 -14px;
+      padding-left: 14px;
+      padding-right: 14px;
+      scrollbar-width: none;
+    }
+
+    #persona-picker::-webkit-scrollbar {
+      display: none;
     }
 
     .persona-btn {
       padding: 7px 12px;
       font-size: 12px;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .chat-delete-btn {
-      display: block;
-      font-size: 15px;
-      padding: 6px 8px;
+      display: flex;
     }
 
     #send-btn {
-      width: 36px;
-      height: 36px;
+      width: 38px;
+      height: 38px;
     }
   }
 
-  @media (max-width: 400px) {
-    #greeting-screen h1 {
-      font-size: 19px;
+  @media (max-width: 360px) {
+    #topbar-title {
+      font-size: 12px;
     }
 
     .persona-btn {
       font-size: 11.5px;
       padding: 6px 10px;
+    }
+  }
+
+  /* Landscape phones: greeting wastes too much vertical space */
+  @media (max-height: 420px) and (max-width: 900px) {
+    #greeting-screen {
+      padding-top: 2vh;
+    }
+
+    #greeting-screen h1 {
+      font-size: 18px;
+      margin-bottom: 4px;
+    }
+
+    #greeting-screen p {
+      margin-bottom: 14px;
     }
   }
 </style>
@@ -533,7 +613,7 @@
       <div id="topbar-inner">
         <button id="menu-btn" aria-label="Toggle chat list">☰</button>
         <div id="topbar-dot"></div>
-        <div id="topbar-title" id="chat-title-label">MY CHATBOT</div>
+        <div id="topbar-title">MY CHATBOT</div>
       </div>
     </div>
 
@@ -551,15 +631,15 @@
         <p>Ask anything, or start from a suggestion below.</p>
 
         <div class="cards">
-          <div class="card" data-prompt="What can you help with?">
+          <div class="card" data-prompt="What can you help with?" tabindex="0">
             <div class="card-title">What can you help with?</div>
             <div class="card-desc">See the kinds of things I can do for you</div>
           </div>
-          <div class="card" data-prompt="Tell me something interesting">
+          <div class="card" data-prompt="Tell me something interesting" tabindex="0">
             <div class="card-title">Tell me something interesting</div>
             <div class="card-desc">Get a fun fact or curious idea</div>
           </div>
-          <div class="card" data-prompt="Help me write something">
+          <div class="card" data-prompt="Help me write something" tabindex="0">
             <div class="card-title">Help me write something</div>
             <div class="card-desc">Drafts, edits, or ideas for any text</div>
           </div>
@@ -570,7 +650,7 @@
 
       <div id="input-wrap">
         <div id="input-area">
-          <textarea id="user-input" placeholder="Message My Chatbot..." rows="1"></textarea>
+          <textarea id="user-input" placeholder="Message My Chatbot..." rows="1" enterkeyhint="send"></textarea>
           <button id="send-btn" aria-label="Send message">↑</button>
         </div>
         <div id="footnote">Responses are generated by AI and may be inaccurate.</div>
@@ -580,6 +660,15 @@
   </div>
 
 <script>
+  // Keep --vh accurate on mobile browsers that change viewport height
+  // when the address bar shows/hides (older browsers without dvh support).
+  function setViewportHeight() {
+    document.documentElement.style.setProperty('--vh', window.innerHeight + 'px');
+  }
+  setViewportHeight();
+  window.addEventListener('resize', setViewportHeight);
+  window.addEventListener('orientationchange', setViewportHeight);
+
   const chatLog = document.getElementById("chat-log");
   const userInput = document.getElementById("user-input");
   const sendBtn = document.getElementById("send-btn");
@@ -656,6 +745,7 @@
       .forEach(chat => {
         const item = document.createElement("div");
         item.classList.add("chat-item");
+        item.tabIndex = 0;
         if (chat.id === currentChatId) item.classList.add("active");
 
         const title = document.createElement("div");
@@ -665,11 +755,15 @@
         const delBtn = document.createElement("button");
         delBtn.classList.add("chat-delete-btn");
         delBtn.textContent = "✕";
+        delBtn.setAttribute("aria-label", "Delete chat");
         delBtn.addEventListener("click", (e) => deleteChat(chat.id, e));
 
         item.appendChild(title);
         item.appendChild(delBtn);
         item.addEventListener("click", () => switchChat(chat.id));
+        item.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") switchChat(chat.id);
+        });
         chatListEl.appendChild(item);
       });
   }
@@ -733,8 +827,20 @@
     userInput.style.height = Math.min(userInput.scrollHeight, 160) + "px";
   });
 
-  userInput.addEventListener("focus", () => inputArea.classList.add("focused"));
+  userInput.addEventListener("focus", () => {
+    inputArea.classList.add("focused");
+    // Give mobile keyboards a moment to open, then scroll input into view
+    setTimeout(() => {
+      userInput.scrollIntoView({ block: "end", behavior: "smooth" });
+    }, 250);
+  });
   userInput.addEventListener("blur", () => inputArea.classList.remove("focused"));
+
+  document.querySelectorAll(".card").forEach(card => {
+    card.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") sendMessage(card.dataset.prompt);
+    });
+  });
 
   async function sendMessage(prefilledText) {
     const message = (prefilledText !== undefined ? prefilledText : userInput.value).trim();
@@ -754,6 +860,7 @@
 
     userInput.value = "";
     userInput.style.height = "auto";
+    userInput.blur();
 
     const botDiv = addMessage("", "bot");
     botDiv.classList.add("empty");
