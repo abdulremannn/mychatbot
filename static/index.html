@@ -89,9 +89,10 @@
   .glow {
     position: absolute;
     border-radius: 50%;
-    filter: blur(90px);
+    filter: blur(60px);
     opacity: 0.16;
     will-change: transform;
+    transform: translateZ(0);
     transition: background 0.4s ease;
   }
 
@@ -118,12 +119,12 @@
   }
 
   @keyframes drift1 {
-    0%, 100% { transform: translate(0, 0); }
-    50% { transform: translate(3vw, 4vw); }
+    0%, 100% { transform: translate3d(0, 0, 0); }
+    50% { transform: translate3d(3vw, 4vw, 0); }
   }
   @keyframes drift2 {
-    0%, 100% { transform: translate(0, 0); }
-    50% { transform: translate(-3vw, -2vw); }
+    0%, 100% { transform: translate3d(0, 0, 0); }
+    50% { transform: translate3d(-3vw, -2vw, 0); }
   }
 
   .stars {
@@ -147,6 +148,16 @@
     .glow { animation: none; }
   }
 
+  /* Ambient glow animation is purely decorative and the most expensive
+     remaining effect (animated transform on a heavily blurred layer).
+     Disable it on small screens where it costs the most relative to
+     GPU power and is least noticeable anyway. */
+  @media (max-width: 760px) {
+    .glow {
+      animation: none;
+    }
+  }
+
   /* Sidebar */
   #sidebar {
     position: relative;
@@ -166,9 +177,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    background: var(--panel);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--border);
     color: var(--text);
     border-radius: var(--radius-sm);
@@ -314,9 +323,7 @@
   }
 
   .persona-btn {
-    background: var(--panel);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--border);
     color: var(--text-muted);
     border-radius: 999px;
@@ -370,9 +377,7 @@
   }
 
   .card {
-    background: var(--panel);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     padding: 14px;
@@ -434,12 +439,27 @@
   }
 
   .bot-msg {
-    background: var(--panel);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--border);
     color: var(--text);
     border-bottom-left-radius: 4px;
+  }
+
+  /* Text reveal effect: each streamed chunk gets wrapped in a span
+     that fades/slides in, giving a "live typing" feel similar to
+     iMessage/ChatGPT rather than text just appearing instantly. */
+  .stream-chunk {
+    display: inline;
+    animation: chunkIn 0.22s ease-out;
+  }
+
+  @keyframes chunkIn {
+    from { opacity: 0; filter: blur(2px); }
+    to { opacity: 1; filter: blur(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stream-chunk { animation: none; }
   }
 
   .bot-msg.empty::after {
@@ -915,7 +935,15 @@
 
           if (fullReply === "") botDiv.classList.remove("empty");
           fullReply += parsed.text;
-          botDiv.textContent = fullReply;
+
+          // Wrap each incoming chunk in a span with a fade/blur-in
+          // animation, so text reveals smoothly like a real chat app
+          // instead of snapping into place instantly.
+          const chunkSpan = document.createElement("span");
+          chunkSpan.className = "stream-chunk";
+          chunkSpan.textContent = parsed.text;
+          botDiv.appendChild(chunkSpan);
+
           chatLog.scrollTop = chatLog.scrollHeight;
         }
       }
