@@ -449,13 +449,13 @@
      that fades/slides in, giving a "live typing" feel similar to
      iMessage/ChatGPT rather than text just appearing instantly. */
   .stream-chunk {
-    display: inline;
-    animation: chunkIn 0.22s ease-out;
+    display: inline-block;
+    animation: chunkIn 0.18s ease-out;
   }
 
   @keyframes chunkIn {
-    from { opacity: 0; filter: blur(2px); }
-    to { opacity: 1; filter: blur(0); }
+    from { opacity: 0; transform: translateY(3px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   @media (prefers-reduced-motion: reduce) {
