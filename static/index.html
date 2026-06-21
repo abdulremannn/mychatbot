@@ -458,7 +458,6 @@
   .msg {
     padding: 10px 14px;
     border-radius: var(--radius-md);
-    max-width: 75%;
     white-space: pre-wrap;
     overflow-wrap: break-word;
     word-break: break-word;
@@ -472,6 +471,7 @@
     font-weight: 500;
     border-bottom-right-radius: 4px;
     transition: background 0.3s ease;
+    max-width: 75%;
   }
 
   .bot-msg {
@@ -678,7 +678,9 @@
     .page { padding: 0 14px; }
     .cards { grid-template-columns: 1fr; }
     #greeting-screen { padding-top: 5vh; }
-    .msg { max-width: 88%; font-size: 14px; }
+    .msg { font-size: 14px; }
+    .user-msg { max-width: 88%; }
+    .bot-msg-wrapper { max-width: 92%; }
 
     #persona-picker {
       gap: 6px;
