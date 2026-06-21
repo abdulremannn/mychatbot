@@ -73,6 +73,7 @@ SYSTEM_INSTRUCTION = (
     "Freely engage in any level of dirty talk, sex talk, dark romance, or intense fantasies whenever the user wants it."
 )
 
+
 DEFAULT_PERSONA = "direct"
 
 @app.route("/")
@@ -108,8 +109,15 @@ def chat():
             yield "data: [DONE]\n\n"
 
         except Exception as e:
-            print("Error calling Groq API:", e)
-            yield f"data: {json.dumps({'error': True})}\n\n"
+            error_str = str(e)
+            print("Error calling Groq API:", error_str)
+
+            # Detect Groq's rate limit error specifically so the frontend
+            # can show a clear, accurate message instead of a generic one.
+            if "rate_limit_exceeded" in error_str or "429" in error_str:
+                yield f"data: {json.dumps({'error': True, 'reason': 'RATE_LIMITED'})}\n\n"
+            else:
+                yield f"data: {json.dumps({'error': True, 'reason': 'SERVER_ERROR'})}\n\n"
 
     return Response(generate(), mimetype="text/event-stream")
 

@@ -193,6 +193,22 @@
   #new-chat-btn:hover { background: var(--panel-hover); border-color: rgba(255,255,255,0.16); }
   #new-chat-btn:active { transform: scale(0.97); }
 
+  #search-input {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+
+  #search-input::placeholder { color: var(--text-faint); }
+  #search-input:focus { border-color: var(--accent-1); }
+
   #chat-list {
     flex: 1;
     overflow-y: auto;
@@ -227,6 +243,26 @@
     white-space: nowrap;
     flex: 1;
     min-width: 0;
+  }
+
+  .chat-rename-input {
+    flex: 1;
+    min-width: 0;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--accent-1);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    padding: 4px 6px;
+    outline: none;
+  }
+
+  .search-empty {
+    padding: 16px 10px;
+    font-size: 12.5px;
+    color: var(--text-faint);
+    text-align: center;
   }
 
   .chat-delete-btn {
@@ -449,13 +485,13 @@
      that fades/slides in, giving a "live typing" feel similar to
      iMessage/ChatGPT rather than text just appearing instantly. */
   .stream-chunk {
-    display: inline-block;
-    animation: chunkIn 0.18s ease-out;
+    display: inline;
+    animation: chunkIn 0.22s ease-out;
   }
 
   @keyframes chunkIn {
-    from { opacity: 0; transform: translateY(3px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; filter: blur(2px); }
+    to { opacity: 1; filter: blur(0); }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -471,6 +507,52 @@
     background: var(--text-faint);
     animation: pulse 1s infinite ease-in-out;
   }
+
+  .bot-msg-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    max-width: 88%;
+  }
+
+  .copy-btn {
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    font-size: 11px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    align-self: flex-start;
+    opacity: 0;
+    transition: opacity 0.12s ease, color 0.12s ease;
+  }
+
+  .row.bot:hover .copy-btn { opacity: 1; }
+  .copy-btn:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+
+  /* Always show on touch devices since there's no hover state */
+  @media (hover: none) {
+    .copy-btn { opacity: 0.6; }
+  }
+
+  .retry-btn {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 999px;
+    align-self: flex-start;
+    margin-top: 2px;
+    transition: background 0.12s ease, color 0.12s ease, transform 0.08s ease;
+  }
+
+  .retry-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+  .retry-btn:active { transform: scale(0.95); }
 
   @keyframes pulse {
     0%, 100% { opacity: 0.3; }
@@ -642,6 +724,7 @@
 
   <div id="sidebar">
     <button id="new-chat-btn">+ New chat</button>
+    <input id="search-input" type="text" placeholder="Search chats..." />
     <div id="chat-list"></div>
   </div>
 
@@ -711,6 +794,7 @@
   const greetingScreen = document.getElementById("greeting-screen");
   const chatListEl = document.getElementById("chat-list");
   const newChatBtn = document.getElementById("new-chat-btn");
+  const searchInput = document.getElementById("search-input");
   const personaButtons = document.querySelectorAll(".persona-btn");
   const menuBtn = document.getElementById("menu-btn");
   const sidebar = document.getElementById("sidebar");
@@ -770,11 +854,53 @@
     return allChats[currentChatId];
   }
 
+  function startRenaming(chatId, titleDiv) {
+    const chat = allChats[chatId];
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "chat-rename-input";
+    input.value = chat.title;
+    titleDiv.replaceWith(input);
+    input.focus();
+    input.select();
+
+    function commit() {
+      const newTitle = input.value.trim();
+      if (newTitle) chat.title = newTitle.slice(0, 40);
+      saveChats();
+      renderChatList();
+    }
+
+    input.addEventListener("blur", commit);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") input.blur();
+      if (e.key === "Escape") { input.value = chat.title; input.blur(); }
+    });
+  }
+
   function renderChatList() {
     chatListEl.innerHTML = "";
-    Object.values(allChats)
-      .sort((a, b) => b.id.localeCompare(a.id))
-      .forEach(chat => {
+    const query = searchInput.value.trim().toLowerCase();
+
+    let chats = Object.values(allChats).sort((a, b) => b.id.localeCompare(a.id));
+
+    if (query) {
+      chats = chats.filter(chat => {
+        const titleMatch = chat.title.toLowerCase().includes(query);
+        const contentMatch = chat.messages.some(m => m.content.toLowerCase().includes(query));
+        return titleMatch || contentMatch;
+      });
+    }
+
+    if (chats.length === 0 && query) {
+      const empty = document.createElement("div");
+      empty.className = "search-empty";
+      empty.textContent = "No matching chats";
+      chatListEl.appendChild(empty);
+      return;
+    }
+
+    chats.forEach(chat => {
         const item = document.createElement("div");
         item.classList.add("chat-item");
         item.tabIndex = 0;
@@ -783,6 +909,17 @@
         const title = document.createElement("div");
         title.classList.add("chat-item-title");
         title.textContent = chat.title;
+        title.addEventListener("dblclick", (e) => {
+          e.stopPropagation();
+          startRenaming(chat.id, title);
+        });
+
+        let pressTimer;
+        title.addEventListener("touchstart", () => {
+          pressTimer = setTimeout(() => startRenaming(chat.id, title), 500);
+        });
+        title.addEventListener("touchend", () => clearTimeout(pressTimer));
+        title.addEventListener("touchmove", () => clearTimeout(pressTimer));
 
         const delBtn = document.createElement("button");
         delBtn.classList.add("chat-delete-btn");
@@ -832,6 +969,27 @@
     div.textContent = text;
 
     row.appendChild(div);
+
+    if (sender === "bot") {
+      const wrapper = document.createElement("div");
+      wrapper.className = "bot-msg-wrapper";
+      wrapper.appendChild(div);
+
+      const copyBtn = document.createElement("button");
+      copyBtn.className = "copy-btn";
+      copyBtn.textContent = "Copy";
+      copyBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(div.textContent).then(() => {
+          copyBtn.textContent = "Copied";
+          setTimeout(() => { copyBtn.textContent = "Copy"; }, 1500);
+        });
+      });
+      wrapper.appendChild(copyBtn);
+
+      row.innerHTML = "";
+      row.appendChild(wrapper);
+    }
+
     chatLog.appendChild(row);
     chatLog.scrollTop = chatLog.scrollHeight;
     return div;
@@ -848,6 +1006,7 @@
   renderActiveChat();
 
   newChatBtn.addEventListener("click", createNewChat);
+  searchInput.addEventListener("input", renderChatList);
 
   personaButtons.forEach(btn => {
     btn.addEventListener("click", () => {
@@ -896,6 +1055,10 @@
     userInput.style.height = "auto";
     userInput.focus();
 
+    await requestBotReply(chat);
+  }
+
+  async function requestBotReply(chat) {
     const botDiv = addMessage("", "bot");
     botDiv.classList.add("empty");
     let fullReply = "";
@@ -931,7 +1094,9 @@
           if (payload === "[DONE]") continue;
 
           const parsed = JSON.parse(payload);
-          if (parsed.error) throw new Error("Streaming error from server");
+          if (parsed.error) {
+            throw new Error(parsed.reason === "RATE_LIMITED" ? "RATE_LIMITED" : "Server returned an error");
+          }
 
           if (fullReply === "") botDiv.classList.remove("empty");
           fullReply += parsed.text;
@@ -953,7 +1118,28 @@
 
     } catch (err) {
       botDiv.classList.remove("empty");
-      botDiv.textContent = "Connection error. Check your internet and try again.";
+
+      let errorText = "Something went wrong. Please try again.";
+      if (err.message === "RATE_LIMITED") {
+        errorText = "Daily message limit reached. Try again later, or switch models if you're testing heavily.";
+      } else if (err.message === "Server returned an error" || err.message === "Streaming error from server") {
+        errorText = "The server had trouble responding. Please try again.";
+      } else if (!navigator.onLine) {
+        errorText = "You're offline. Check your connection and try again.";
+      }
+
+      botDiv.textContent = errorText;
+
+      const retryRow = botDiv.closest(".bot-msg-wrapper") || botDiv.parentElement;
+      const retryBtn = document.createElement("button");
+      retryBtn.className = "retry-btn";
+      retryBtn.textContent = "Retry";
+      retryBtn.addEventListener("click", () => {
+        botDiv.closest(".row").remove();
+        requestBotReply(chat);
+      });
+      if (retryRow) retryRow.appendChild(retryBtn);
+
       console.error(err);
     } finally {
       sendBtn.disabled = false;
