@@ -860,7 +860,8 @@
 
     userInput.value = "";
     userInput.style.height = "auto";
-    userInput.blur();
+
+    userInput.focus();
 
     const botDiv = addMessage("", "bot");
     botDiv.classList.add("empty");
