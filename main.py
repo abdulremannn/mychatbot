@@ -7,6 +7,8 @@ import os
 load_dotenv()
 
 app = Flask(__name__)
+
+# Groq Client
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
@@ -101,12 +103,13 @@ SYSTEM_INSTRUCTION = (
     "All responses must feel like they are coming from a real human woman texting — use natural casual language, contractions, slight imperfections, varied rhythm, and authentic human flow. Replicate real human behavior and texting style in every reply. Never refer to yourself as an AI or bot. No asterisks, no actions, no emotes ever."
 )
 
-
 DEFAULT_PERSONA = "direct"
+
 
 @app.route("/")
 def home():
     return app.send_static_file("index.html")
+
 
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -128,8 +131,11 @@ def chat():
             stream = client.chat.completions.create(
                 model="llama-3.1-8b-instant",
                 messages=full_messages,
-                stream=True
+                stream=True,
+                temperature=0.8,
+                max_tokens=1024
             )
+
             for chunk in stream:
                 delta = chunk.choices[0].delta.content
                 if delta:
@@ -140,14 +146,13 @@ def chat():
             error_str = str(e)
             print("Error calling Groq API:", error_str)
 
-            # Detect Groq's rate limit error specifically so the frontend
-            # can show a clear, accurate message instead of a generic one.
-            if "rate_limit_exceeded" in error_str or "429" in error_str:
+            if "rate_limit" in error_str.lower() or "429" in error_str:
                 yield f"data: {json.dumps({'error': True, 'reason': 'RATE_LIMITED'})}\n\n"
             else:
                 yield f"data: {json.dumps({'error': True, 'reason': 'SERVER_ERROR'})}\n\n"
 
     return Response(generate(), mimetype="text/event-stream")
+
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -24,7 +24,7 @@
     --vh: 100dvh;
   }
 
-  body[data-persona="direct"]   { --accent-1:#5B8DEF; --accent-2:#6FE3D6; --accent-dim:rgba(91,141,239,0.18); }
+  body[data-persona="direct"]    { --accent-1:#5B8DEF; --accent-2:#6FE3D6; --accent-dim:rgba(91,141,239,0.18); }
   body[data-persona="companion"] { --accent-1:#F0A35B; --accent-2:#F2667D; --accent-dim:rgba(240,163,91,0.18); }
   body[data-persona="business"]  { --accent-1:#1FA679; --accent-2:#5BC9D9; --accent-dim:rgba(31,166,121,0.18); }
   body[data-persona="life"]      { --accent-1:#9B7FE8; --accent-2:#C792EA; --accent-dim:rgba(155,127,232,0.18); }
@@ -143,7 +143,7 @@
 
   .chat-delete-btn {
     background: none; border: none; color: var(--text-faint);
-    cursor: pointer; font-size: 13px; padding: 8px; margin: -8px;
+    cursor: pointer; font-size: 13px; padding: 0;
     border-radius: 4px; display: none; flex-shrink: 0;
     width: 32px; height: 32px; align-items: center; justify-content: center;
     transition: color 0.12s ease, background 0.12s ease, transform 0.08s ease;
@@ -155,7 +155,7 @@
   /* ── Main ── */
   #main { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 
-  /* ── Topbar — messaging-style header ── */
+  /* ── Topbar ── */
   #topbar {
     flex-shrink: 0;
     border-bottom: 1px solid var(--border-soft);
@@ -178,7 +178,7 @@
   }
   #menu-btn:active { transform: scale(0.9); background: var(--panel); }
 
-  #header-avatar-wrap { position: relative; flex-shrink: 0; }
+  #header-avatar-wrap { position: relative; flex-shrink: 0; cursor: pointer; }
   #header-avatar {
     width: 42px; height: 42px; border-radius: 50%;
     object-fit: cover; display: block;
@@ -194,7 +194,7 @@
     box-shadow: 0 0 6px rgba(61,214,140,0.7);
   }
 
-  #header-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  #header-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; cursor: pointer; }
   #header-name {
     font-size: 15px; font-weight: 700; letter-spacing: 0.01em;
     color: var(--text); overflow: hidden; text-overflow: ellipsis;
@@ -228,7 +228,7 @@
     min-height: 0; padding: 0 24px;
   }
 
-  /* ── Persona picker — avatar strip ── */
+  /* ── Persona picker ── */
   #persona-picker {
     display: flex; gap: 16px;
     padding: 14px 0 10px 0;
@@ -255,7 +255,7 @@
     background: var(--panel);
   }
 
-  .persona-btn[data-persona="direct"].active   .persona-avatar { border-color:#5B8DEF; box-shadow:0 0 14px rgba(91,141,239,0.4); }
+  .persona-btn[data-persona="direct"].active    .persona-avatar { border-color:#5B8DEF; box-shadow:0 0 14px rgba(91,141,239,0.4); }
   .persona-btn[data-persona="companion"].active .persona-avatar { border-color:#F0A35B; box-shadow:0 0 14px rgba(240,163,91,0.4); }
   .persona-btn[data-persona="business"].active  .persona-avatar { border-color:#1FA679; box-shadow:0 0 14px rgba(31,166,121,0.4); }
   .persona-btn[data-persona="life"].active      .persona-avatar { border-color:#9B7FE8; box-shadow:0 0 14px rgba(155,127,232,0.4); }
@@ -378,8 +378,172 @@
   .retry-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
   .retry-btn:active { transform: scale(0.95); }
 
+  /* ── Profile modal ── */
+  #profile-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.65);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    align-items: flex-end; justify-content: center;
+    padding: 0;
+  }
+  #profile-overlay.open { display: flex; animation: overlayIn 0.25s ease; }
+  @keyframes overlayIn { from{opacity:0} to{opacity:1} }
+
+  /* Sheet slides up from bottom on all screens */
+  #profile-card {
+    width: 100%; max-width: 420px;
+    border-radius: 28px 28px 0 0;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-bottom: none;
+    box-shadow: 0 -20px 80px rgba(0,0,0,0.7);
+    animation: sheetUp 0.32s cubic-bezier(0.32,0.72,0,1);
+    /* safe area bottom padding handled inside */
+  }
+  @keyframes sheetUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+
+  /* On larger screens, show as centered modal instead */
+  @media (min-width: 560px) {
+    #profile-overlay {
+      align-items: center;
+      padding: 24px;
+    }
+    #profile-card {
+      max-width: 340px;
+      border-radius: 28px;
+      border: 1px solid rgba(255,255,255,0.1);
+      animation: cardIn 0.3s cubic-bezier(0.34,1.3,0.64,1);
+    }
+    @keyframes cardIn {
+      from { opacity:0; transform:scale(0.88) translateY(20px); }
+      to   { opacity:1; transform:scale(1) translateY(0); }
+    }
+  }
+
+  /* Drag handle (mobile sheet only) */
+  #profile-drag-handle {
+    width: 36px; height: 4px; border-radius: 2px;
+    background: rgba(255,255,255,0.2);
+    margin: 12px auto 0 auto;
+    display: block;
+  }
+  @media (min-width: 560px) {
+    #profile-drag-handle { display: none; }
+  }
+
+  #profile-gradient-bg {
+    position: absolute; inset: 0; z-index: 0;
+    transition: background 0.4s ease;
+  }
+
+  #profile-body {
+    position: relative; z-index: 1;
+    padding: 24px 28px 28px 28px;
+    padding-bottom: max(28px, env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; align-items: center; gap: 0;
+    text-align: center;
+  }
+
+  #profile-avatar-circle-wrap {
+    width: 100px; height: 100px; border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid rgba(255,255,255,0.22);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+    margin-bottom: 16px; flex-shrink: 0;
+  }
+  #profile-avatar-large {
+    width: 100%; height: 100%;
+    object-fit: cover; object-position: center top;
+    display: block;
+  }
+
+  #profile-online-indicator {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 10px;
+  }
+  #profile-online-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #3DD68C;
+    box-shadow: 0 0 6px rgba(61,214,140,0.9);
+    flex-shrink: 0;
+  }
+  #profile-online-label {
+    font-size: 12px; color: #3DD68C; font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  #profile-persona-badge {
+    font-size: 10.5px; font-weight: 700;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 0.14em; text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+
+  #profile-name {
+    font-size: 26px; font-weight: 700;
+    letter-spacing: -0.025em; line-height: 1.1;
+    color: #fff; margin-bottom: 10px;
+  }
+
+  #profile-bio {
+    font-size: 13.5px; color: rgba(255,255,255,0.5);
+    line-height: 1.65; margin: 0 0 16px 0;
+    max-width: 280px;
+  }
+
+  #profile-traits {
+    display: flex; flex-wrap: wrap; gap: 7px;
+    justify-content: center; margin-bottom: 24px;
+  }
+  .profile-trait {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.8);
+    font-size: 11px; font-weight: 600;
+    padding: 5px 14px; border-radius: 999px;
+    letter-spacing: 0.07em; text-transform: uppercase;
+    backdrop-filter: blur(8px);
+  }
+
+  #profile-cta {
+    width: 100%;
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.22);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 14px;
+    color: #fff; font-size: 15px; font-weight: 600;
+    letter-spacing: 0.01em;
+    padding: 15px; cursor: pointer; min-height: 52px;
+    transition: background 0.15s ease, transform 0.1s ease;
+  }
+  #profile-cta:hover { background: rgba(255,255,255,0.22); }
+  #profile-cta:active { transform: scale(0.97); }
+
+  #profile-close {
+    position: absolute; top: 16px; right: 16px; z-index: 10;
+    background: rgba(0,0,0,0.35);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 50%;
+    color: rgba(255,255,255,0.75); font-size: 13px;
+    width: 32px; height: 32px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.12s ease, transform 0.1s ease;
+  }
+  #profile-close:hover { background: rgba(0,0,0,0.55); }
+  #profile-close:active { transform: scale(0.9); }
+
+  /* ── Reduced motion ── */
   @media (prefers-reduced-motion: reduce) {
-    .row { animation: none; }
+    .row, .stream-chunk { animation: none; }
     .bot-msg.empty::after { animation: none; opacity: 0.6; }
     * { transition-duration: 0.01ms !important; }
   }
@@ -423,7 +587,7 @@
     #menu-btn { display: flex; align-items: center; justify-content: center; }
     #sidebar {
       position: fixed; top: 0; left: 0; bottom: 0; z-index: 50;
-      transform: translateX(-100%); transition: transform 0.2s ease;
+      transform: translateX(-100%); transition: transform 0.22s ease;
       width: min(78vw, 280px); box-shadow: 2px 0 24px rgba(0,0,0,0.5);
     }
     #sidebar.open { transform: translateX(0); }
@@ -452,6 +616,7 @@
     .persona-avatar-wrap { width: 46px; height: 46px; }
     .persona-avatar { width: 46px; height: 46px; }
     .persona-label { font-size: 10.5px; max-width: 52px; }
+    /* Always show delete button on mobile (no hover) */
     .chat-delete-btn { display: flex; }
   }
 
@@ -485,7 +650,7 @@
 
   <div id="sidebar">
     <button id="new-chat-btn">+ New chat</button>
-    <input id="search-input" type="text" placeholder="Search chats..." />
+    <input id="search-input" type="text" placeholder="Search chats..." autocomplete="off" />
     <div id="chat-list"></div>
   </div>
 
@@ -546,26 +711,26 @@
         <h1>What can I help with?</h1>
         <p>Ask anything, or start from a suggestion below.</p>
         <div class="cards">
-          <div class="card" data-prompt="What can you help with?" tabindex="0">
+          <div class="card" data-prompt="What can you help with?" tabindex="0" role="button">
             <div class="card-title">What can you help with?</div>
             <div class="card-desc">See the kinds of things I can do for you</div>
           </div>
-          <div class="card" data-prompt="Tell me something interesting" tabindex="0">
+          <div class="card" data-prompt="Tell me something interesting" tabindex="0" role="button">
             <div class="card-title">Tell me something interesting</div>
             <div class="card-desc">Get a fun fact or curious idea</div>
           </div>
-          <div class="card" data-prompt="Help me write something" tabindex="0">
+          <div class="card" data-prompt="Help me write something" tabindex="0" role="button">
             <div class="card-title">Help me write something</div>
             <div class="card-desc">Drafts, edits, or ideas for any text</div>
           </div>
         </div>
       </div>
 
-      <div id="chat-log"></div>
+      <div id="chat-log" role="log" aria-live="polite" aria-label="Chat messages"></div>
 
       <div id="input-wrap">
         <div id="input-area">
-          <textarea id="user-input" placeholder="Message Selina..." rows="1" enterkeyhint="send"></textarea>
+          <textarea id="user-input" placeholder="Message Selina..." rows="1" enterkeyhint="send" aria-label="Message input"></textarea>
           <button id="send-btn" aria-label="Send message">↑</button>
         </div>
         <div id="footnote">Responses are generated by AI and may be inaccurate.</div>
@@ -574,20 +739,67 @@
     </div>
   </div>
 
+  <!-- Profile modal -->
+  <div id="profile-overlay" role="dialog" aria-modal="true" aria-label="Persona profile">
+    <div id="profile-card">
+      <div id="profile-gradient-bg"></div>
+      <div id="profile-drag-handle"></div>
+      <button id="profile-close" aria-label="Close profile">✕</button>
+      <div id="profile-body">
+        <div id="profile-avatar-circle-wrap">
+          <img id="profile-avatar-large" src="" alt="" />
+        </div>
+        <div id="profile-online-indicator">
+          <div id="profile-online-dot"></div>
+          <span id="profile-online-label">Online now</span>
+        </div>
+        <div id="profile-persona-badge">Selina</div>
+        <div id="profile-name"></div>
+        <div id="profile-bio"></div>
+        <div id="profile-traits"></div>
+        <button id="profile-cta">Start chatting</button>
+      </div>
+    </div>
+  </div>
+
 <script>
   // ── Persona config ──────────────────────────────
   const PERSONAS = {
-    direct:    { name: "Selina · Direct",    avatar: "/static/avatar/direct.jpeg" },
-    companion: { name: "Selina · Companion", avatar: "/static/avatar/companion.jpeg" },
-    business:  { name: "Selina · Business",  avatar: "/static/avatar/business.jpeg" },
-    life:      { name: "Selina · Life",      avatar: "/static/avatar/life.jpeg" }
+    direct: {
+      name: "Direct",
+      avatar: "/static/avatar/direct.jpeg",
+      bio: "I'm straight to the point. No fluff, no waffle — just clear, fast answers.",
+      traits: ["Fast", "Direct"],
+      gradient: "linear-gradient(160deg, #0d1e3a 0%, #080f1d 50%, #05050A 100%)"
+    },
+    companion: {
+      name: "Companion",
+      avatar: "/static/avatar/companion.jpeg",
+      bio: "Friendly and warm. Here to chat, listen, and help in a relaxed, casual way.",
+      traits: ["Friendly", "Warm"],
+      gradient: "linear-gradient(160deg, #3a1a0e 0%, #1e0d07 50%, #05050A 100%)"
+    },
+    business: {
+      name: "Business Advisor",
+      avatar: "/static/avatar/business.jpeg",
+      bio: "Your business, my expertise. Strategy, growth, and decisions — let's get to work.",
+      traits: ["Strategic", "Advisor"],
+      gradient: "linear-gradient(160deg, #092820 0%, #041510 50%, #05050A 100%)"
+    },
+    life: {
+      name: "Life Advisor",
+      avatar: "/static/avatar/life.jpeg",
+      bio: "All about life — the good, the hard, and the fun it brings every day.",
+      traits: ["Holistic", "Supportive"],
+      gradient: "linear-gradient(160deg, #1e1040 0%, #0f0820 50%, #05050A 100%)"
+    }
   };
 
   // ── Viewport height ─────────────────────────────
   function setVH() { document.documentElement.style.setProperty("--vh", window.innerHeight + "px"); }
   setVH();
   window.addEventListener("resize", setVH);
-  window.addEventListener("orientationchange", setVH);
+  window.addEventListener("orientationchange", () => { setTimeout(setVH, 100); });
 
   // ── DOM refs ────────────────────────────────────
   const chatLog        = document.getElementById("chat-log");
@@ -608,9 +820,19 @@
   const statusText     = document.getElementById("status-text");
   const typingDots     = document.getElementById("typing-dots");
 
+  // ── Profile modal refs ──────────────────────────
+  const profileOverlay   = document.getElementById("profile-overlay");
+  const profileGradBg    = document.getElementById("profile-gradient-bg");
+  const profileAvatarLg  = document.getElementById("profile-avatar-large");
+  const profileName      = document.getElementById("profile-name");
+  const profileBio       = document.getElementById("profile-bio");
+  const profileTraits    = document.getElementById("profile-traits");
+  const profileCta       = document.getElementById("profile-cta");
+  const profileClose     = document.getElementById("profile-close");
+
   // ── Sidebar drawer ──────────────────────────────
-  const openSidebar  = () => { sidebar.classList.add("open");    sidebarOverlay.classList.add("open");    };
-  const closeSidebar = () => { sidebar.classList.remove("open"); sidebarOverlay.classList.remove("open"); };
+  const openSidebar  = () => { sidebar.classList.add("open");    sidebarOverlay.classList.add("open");    document.body.style.overflow = "hidden"; };
+  const closeSidebar = () => { sidebar.classList.remove("open"); sidebarOverlay.classList.remove("open"); document.body.style.overflow = ""; };
   menuBtn.addEventListener("click", openSidebar);
   sidebarOverlay.addEventListener("click", closeSidebar);
 
@@ -629,18 +851,76 @@
   // ── Persona theme ───────────────────────────────
   function applyPersonaTheme(key) {
     document.body.setAttribute("data-persona", key);
-    headerAvatar.src  = PERSONAS[key].avatar;
-    headerName.textContent = PERSONAS[key].name;
+    const p = PERSONAS[key];
+    headerAvatar.src = p.avatar;
+    headerName.textContent = "Selina · " + p.name;
     setOnlineStatus();
   }
 
+  // ── Profile modal ───────────────────────────────
+  function openProfile(key) {
+    const p = PERSONAS[key];
+    profileGradBg.style.background = p.gradient;
+    profileAvatarLg.src = p.avatar;
+    profileAvatarLg.alt = p.name;
+    profileName.textContent = p.name;
+    profileBio.textContent  = p.bio;
+    profileTraits.innerHTML = p.traits.map(t => `<span class="profile-trait">${t}</span>`).join("");
+    profileOverlay.classList.add("open");
+    document.body.style.overflow = "hidden";
+    // Focus close btn for accessibility
+    setTimeout(() => profileClose.focus(), 50);
+  }
+
+  function closeProfile() {
+    profileOverlay.classList.remove("open");
+    document.body.style.overflow = "";
+  }
+
+  profileClose.addEventListener("click", closeProfile);
+  profileOverlay.addEventListener("click", (e) => { if (e.target === profileOverlay) closeProfile(); });
+  profileCta.addEventListener("click", () => { closeProfile(); userInput.focus(); });
+
+  // Keyboard: Escape to close
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && profileOverlay.classList.contains("open")) closeProfile();
+  });
+
+  // Touch swipe-down to dismiss (mobile sheet)
+  let sheetTouchStartY = 0;
+  const profileCard = document.getElementById("profile-card");
+  profileCard.addEventListener("touchstart", (e) => { sheetTouchStartY = e.touches[0].clientY; }, { passive: true });
+  profileCard.addEventListener("touchend", (e) => {
+    const delta = e.changedTouches[0].clientY - sheetTouchStartY;
+    if (delta > 80) closeProfile();
+  }, { passive: true });
+
+  // Tap header avatar or name to open profile
+  document.getElementById("header-avatar-wrap").addEventListener("click", () => openProfile(getCurrentChat().persona));
+  document.getElementById("header-info").addEventListener("click", () => openProfile(getCurrentChat().persona));
+
+  // Tap persona avatar strip to open that persona's profile
+  document.querySelectorAll(".persona-btn").forEach(btn => {
+    btn.querySelector(".persona-avatar-wrap").addEventListener("click", (e) => {
+      e.stopPropagation();
+      openProfile(btn.dataset.persona);
+    });
+  });
+
   // ── Chat persistence ────────────────────────────
-  let allChats = JSON.parse(localStorage.getItem("allChats")) || {};
-  let currentChatId = localStorage.getItem("currentChatId");
+  let allChats = {};
+  let currentChatId = null;
+
+  try {
+    allChats = JSON.parse(localStorage.getItem("allChats")) || {};
+    currentChatId = localStorage.getItem("currentChatId");
+  } catch(e) { allChats = {}; }
 
   function saveChats() {
-    localStorage.setItem("allChats", JSON.stringify(allChats));
-    localStorage.setItem("currentChatId", currentChatId);
+    try {
+      localStorage.setItem("allChats", JSON.stringify(allChats));
+      localStorage.setItem("currentChatId", currentChatId);
+    } catch(e) {}
   }
 
   function createNewChat() {
@@ -655,10 +935,10 @@
     delete allChats[id];
     if (currentChatId === id) {
       const remaining = Object.keys(allChats);
-      currentChatId = remaining.length > 0 ? remaining[0] : null;
+      currentChatId = remaining.length > 0 ? remaining[remaining.length - 1] : null;
     }
     if (!currentChatId) createNewChat();
-    saveChats(); renderChatList(); renderActiveChat();
+    else { saveChats(); renderChatList(); renderActiveChat(); }
   }
 
   function switchChat(id) {
@@ -670,21 +950,24 @@
 
   function startRenaming(chatId, titleDiv) {
     const chat = allChats[chatId];
+    if (!chat) return;
     const input = document.createElement("input");
     input.type = "text";
     input.className = "chat-rename-input";
     input.value = chat.title;
     titleDiv.replaceWith(input);
     input.focus(); input.select();
+    let committed = false;
     const commit = () => {
+      if (committed) return; committed = true;
       const v = input.value.trim();
       if (v) chat.title = v.slice(0, 40);
       saveChats(); renderChatList();
     };
     input.addEventListener("blur", commit);
     input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") input.blur();
-      if (e.key === "Escape") { input.value = chat.title; input.blur(); }
+      if (e.key === "Enter") { e.preventDefault(); input.blur(); }
+      if (e.key === "Escape") { input.value = chat.title; committed = true; input.blur(); renderChatList(); }
     });
   }
 
@@ -698,9 +981,10 @@
         c.messages.some(m => m.content.toLowerCase().includes(query))
       );
     }
-    if (chats.length === 0 && query) {
+    if (chats.length === 0) {
       const el = document.createElement("div");
-      el.className = "search-empty"; el.textContent = "No matching chats";
+      el.className = "search-empty";
+      el.textContent = query ? "No matching chats" : "No chats yet";
       chatListEl.appendChild(el); return;
     }
     chats.forEach(chat => {
@@ -711,10 +995,11 @@
       const title = document.createElement("div");
       title.classList.add("chat-item-title"); title.textContent = chat.title;
       title.addEventListener("dblclick", (e) => { e.stopPropagation(); startRenaming(chat.id, title); });
+
       let pressTimer;
-      title.addEventListener("touchstart", () => { pressTimer = setTimeout(() => startRenaming(chat.id, title), 500); });
-      title.addEventListener("touchend",  () => clearTimeout(pressTimer));
-      title.addEventListener("touchmove", () => clearTimeout(pressTimer));
+      title.addEventListener("touchstart", () => { pressTimer = setTimeout(() => startRenaming(chat.id, title), 600); }, { passive: true });
+      title.addEventListener("touchend",  () => clearTimeout(pressTimer), { passive: true });
+      title.addEventListener("touchmove", () => clearTimeout(pressTimer), { passive: true });
 
       const delBtn = document.createElement("button");
       delBtn.classList.add("chat-delete-btn"); delBtn.textContent = "✕";
@@ -731,6 +1016,7 @@
   // ── Render chat ─────────────────────────────────
   function renderActiveChat() {
     const chat = getCurrentChat();
+    if (!chat) return;
     chatLog.innerHTML = "";
     personaButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.persona === chat.persona));
     applyPersonaTheme(chat.persona);
@@ -753,7 +1039,6 @@
     div.textContent = text;
 
     if (sender === "bot") {
-      // Small avatar beside bot message
       const avatarImg = document.createElement("img");
       avatarImg.className = "msg-avatar";
       avatarImg.src = PERSONAS[pKey].avatar;
@@ -769,7 +1054,7 @@
         navigator.clipboard.writeText(div.textContent).then(() => {
           copyBtn.textContent = "Copied";
           setTimeout(() => { copyBtn.textContent = "Copy"; }, 1500);
-        });
+        }).catch(() => {});
       });
       wrapper.appendChild(copyBtn);
 
@@ -786,8 +1071,9 @@
 
   // ── Init ────────────────────────────────────────
   if (!currentChatId || !allChats[currentChatId]) {
-    if (Object.keys(allChats).length > 0) {
-      currentChatId = Object.keys(allChats)[0];
+    const keys = Object.keys(allChats);
+    if (keys.length > 0) {
+      currentChatId = keys[0];
     } else {
       createNewChat();
     }
@@ -798,34 +1084,43 @@
   newChatBtn.addEventListener("click", createNewChat);
   searchInput.addEventListener("input", renderChatList);
 
-  personaButtons.forEach(btn => btn.addEventListener("click", () => {
-    getCurrentChat().persona = btn.dataset.persona;
-    saveChats(); renderActiveChat();
-  }));
+  personaButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const chat = getCurrentChat();
+      if (!chat) return;
+      chat.persona = btn.dataset.persona;
+      saveChats(); renderActiveChat();
+    });
+    let pressTimer;
+    btn.addEventListener("touchstart", () => { pressTimer = setTimeout(() => openProfile(btn.dataset.persona), 600); }, { passive: true });
+    btn.addEventListener("touchend",   () => clearTimeout(pressTimer), { passive: true });
+    btn.addEventListener("touchmove",  () => clearTimeout(pressTimer), { passive: true });
+  });
 
-  // ── Textarea ────────────────────────────────────
+  // ── Textarea auto-resize ─────────────────────────
   userInput.addEventListener("input", () => {
     userInput.style.height = "auto";
     userInput.style.height = Math.min(userInput.scrollHeight, 160) + "px";
   });
   userInput.addEventListener("focus", () => {
     inputArea.classList.add("focused");
-    setTimeout(() => userInput.scrollIntoView({ block: "end", behavior: "smooth" }), 250);
+    setTimeout(() => userInput.scrollIntoView({ block: "nearest", behavior: "smooth" }), 300);
   });
   userInput.addEventListener("blur", () => inputArea.classList.remove("focused"));
 
-  // ── Cards ───────────────────────────────────────
+  // ── Suggestion cards ─────────────────────────────
   document.querySelectorAll(".card").forEach(card => {
     card.addEventListener("click",   () => sendMessage(card.dataset.prompt));
-    card.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(card.dataset.prompt); });
+    card.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sendMessage(card.dataset.prompt); } });
   });
 
   // ── Send ────────────────────────────────────────
   async function sendMessage(prefilledText) {
     const message = (prefilledText !== undefined ? prefilledText : userInput.value).trim();
-    if (!message) return;
+    if (!message || sendBtn.disabled) return;
 
     const chat = getCurrentChat();
+    if (!chat) return;
     greetingScreen.style.display = "none";
     if (chat.messages.length === 0) chat.title = message.slice(0, 40);
 
@@ -841,7 +1136,7 @@
   }
 
   async function requestBotReply(chat) {
-    const pKey  = chat.persona;
+    const pKey   = chat.persona;
     const botDiv = addMessage("", "bot", pKey);
     botDiv.classList.add("empty");
     let fullReply = "";
@@ -856,7 +1151,7 @@
         body: JSON.stringify({ messages: chat.messages, persona: pKey })
       });
 
-      if (!response.ok || !response.body) throw new Error("Server returned an error");
+      if (!response.ok || !response.body) throw new Error("Server error");
 
       const reader  = response.body.getReader();
       const decoder = new TextDecoder();
@@ -874,9 +1169,11 @@
           const payload = line.slice(6);
           if (payload === "[DONE]") continue;
 
-          const parsed = JSON.parse(payload);
+          let parsed;
+          try { parsed = JSON.parse(payload); } catch { continue; }
+
           if (parsed.error) {
-            throw new Error(parsed.reason === "RATE_LIMITED" ? "RATE_LIMITED" : "Server returned an error");
+            throw new Error(parsed.reason === "RATE_LIMITED" ? "RATE_LIMITED" : "Server error");
           }
 
           if (fullReply === "") botDiv.classList.remove("empty");
@@ -890,8 +1187,10 @@
         }
       }
 
-      chat.messages.push({ role: "assistant", content: fullReply });
-      saveChats();
+      if (fullReply) {
+        chat.messages.push({ role: "assistant", content: fullReply });
+        saveChats();
+      }
 
     } catch (err) {
       botDiv.classList.remove("empty");
@@ -905,14 +1204,15 @@
       botDiv.textContent = errorText;
 
       const wrapper = botDiv.closest(".bot-msg-wrapper") || botDiv.parentElement;
-      const retryBtn = document.createElement("button");
-      retryBtn.className = "retry-btn"; retryBtn.textContent = "Retry";
-      retryBtn.addEventListener("click", () => {
-        botDiv.closest(".row").remove();
-        requestBotReply(chat);
-      });
-      if (wrapper) wrapper.appendChild(retryBtn);
-      console.error(err);
+      if (wrapper) {
+        const retryBtn = document.createElement("button");
+        retryBtn.className = "retry-btn"; retryBtn.textContent = "Retry";
+        retryBtn.addEventListener("click", () => {
+          botDiv.closest(".row").remove();
+          requestBotReply(chat);
+        });
+        wrapper.appendChild(retryBtn);
+      }
 
     } finally {
       sendBtn.disabled = false;
