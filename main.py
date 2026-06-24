@@ -3,13 +3,31 @@ import json
 from groq import Groq
 from dotenv import load_dotenv
 import os
+from itertools import cycle
 
 load_dotenv()
 
 app = Flask(__name__)
 
-# Groq Client
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+# Groq Client — rotates through multiple keys when rate limited
+GROQ_API_KEYS = []
+i = 1
+while True:
+    key = os.getenv(f"GROQ_API_KEY_{i}")
+    if not key:
+        break
+    GROQ_API_KEYS.append(key)
+    i += 1
+if not GROQ_API_KEYS:
+    single = os.getenv("GROQ_API_KEY")
+    if single:
+        GROQ_API_KEYS.append(single)
+if not GROQ_API_KEYS:
+    raise RuntimeError("No Groq API keys found in .env")
+
+print(f"Loaded {len(GROQ_API_KEYS)} API key(s)")
+key_cycle = cycle(GROQ_API_KEYS)
+client = Groq(api_key=next(key_cycle))
 
 
 BASE_RULES = (
@@ -111,12 +129,11 @@ def home():
     return app.send_static_file("index.html")
 
 PERSONA_SETTINGS = {
-    "direct":    {"temperature": 0.55, "max_tokens": 400000},
-    "companion": {"temperature": 0.75, "max_tokens": 400000},
-    "business":  {"temperature": 0.55, "max_tokens": 400000},
-    "life":      {"temperature": 0.72, "max_tokens": 400000},
+    "direct":    {"temperature": 0.5,  "max_tokens": 1024},
+    "companion": {"temperature": 0.8,  "max_tokens": 1024},
+    "business":  {"temperature": 0.5,  "max_tokens": 1024},
+    "life":      {"temperature": 0.7,  "max_tokens": 1024},
 }
-
 def trim_history(history, max_tokens=3000):
     trimmed = []
     used = 0
@@ -153,25 +170,40 @@ def chat():
     full_messages = [{"role": "system", "content": system_content}] + trim_history(history)
 
     def generate():
-        try:
-            stream = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
-                messages=full_messages,
-                stream=True,
-                temperature=settings["temperature"],
-                max_tokens=settings["max_tokens"]
-            )
-            for chunk in stream:
-                delta = chunk.choices[0].delta.content
-                if delta:
-                    yield f"data: {json.dumps({'text': delta})}\n\n"
-            yield "data: [DONE]\n\n"
+        global client
+        attempts = 0
+        max_attempts = len(GROQ_API_KEYS)
 
-        except Exception as e:
-            error_str = str(e)
-            print("Groq API error:", error_str)
-            reason = "RATE_LIMITED" if ("rate_limit" in error_str.lower() or "429" in error_str) else "SERVER_ERROR"
-            yield f"data: {json.dumps({'error': True, 'reason': reason})}\n\n"
+        while attempts < max_attempts:
+            try:
+                stream = client.chat.completions.create(
+                    model="llama-3.1-8b-instant",
+                    messages=full_messages,
+                    stream=True,
+                    temperature=settings["temperature"],
+                    max_tokens=settings["max_tokens"]
+                )
+                for chunk in stream:
+                    delta = chunk.choices[0].delta.content
+                    if delta:
+                        yield f"data: {json.dumps({'text': delta})}\n\n"
+                yield "data: [DONE]\n\n"
+                return
+
+            except Exception as e:
+                error_str = str(e)
+                print("Groq API error:", error_str)
+                if "rate_limit" in error_str.lower() or "429" in error_str:
+                    new_key = next(key_cycle)
+                    client = Groq(api_key=new_key)
+                    print(f"Switched API key (attempt {attempts + 1}/{max_attempts})")
+                    attempts += 1
+                    continue
+                else:
+                    yield f"data: {json.dumps({'error': True, 'reason': 'SERVER_ERROR'})}\n\n"
+                    return
+
+        yield f"data: {json.dumps({'error': True, 'reason': 'RATE_LIMITED'})}\n\n"
 
     return Response(
         generate(),
