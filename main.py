@@ -111,10 +111,10 @@ def home():
     return app.send_static_file("index.html")
 
 PERSONA_SETTINGS = {
-    "direct":    {"temperature": 0.55, "max_tokens": 400},
-    "companion": {"temperature": 0.75, "max_tokens": 512},
-    "business":  {"temperature": 0.55, "max_tokens": 512},
-    "life":      {"temperature": 0.72, "max_tokens": 512},
+    "direct":    {"temperature": 0.55, "max_tokens": 400000},
+    "companion": {"temperature": 0.75, "max_tokens": 400000},
+    "business":  {"temperature": 0.55, "max_tokens": 400000},
+    "life":      {"temperature": 0.72, "max_tokens": 400000},
 }
 
 def trim_history(history, max_tokens=3000):
