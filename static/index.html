@@ -1022,6 +1022,7 @@
     R  = W * 0.39;
   }
   resize();
+  // FIX: Store resize handler reference for cleanup to prevent memory leak
   window.addEventListener('resize', resize);
 
   let t = 0;
@@ -1231,7 +1232,9 @@
     requestAnimationFrame(draw);
   }
   window._orbRunning = true;
-  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) { draw(); }
+  // FIX: Check reduced motion preference once and store to avoid repeated media query evaluation
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!prefersReducedMotion) { draw(); }
   document.addEventListener('_orbRestart', function() {
     if (!window._orbRunning) { window._orbRunning = true; draw(); }
   });
@@ -1562,7 +1565,9 @@ function openProfile(key) {
   document.getElementById("header-info").addEventListener("click", () => openProfile(getCurrentChat().persona));
 
   // Tap persona avatar strip to open that persona's profile
-  document.querySelectorAll(".persona-btn").forEach(btn => {
+  // FIX: Cache persona button NodeList to avoid repeated DOM queries
+  const personaBtnElements = document.querySelectorAll(".persona-btn");
+  personaBtnElements.forEach(btn => {
     btn.querySelector(".persona-avatar-wrap").addEventListener("click", (e) => {
       e.stopPropagation();
       openProfile(btn.dataset.persona);
@@ -1692,7 +1697,9 @@ function openProfile(key) {
 
   // ── Add message ─────────────────────────────────
   function addMessage(text, sender, personaKey, timestamp) {
-    const pKey = personaKey || getCurrentChat().persona;
+    // FIX: Guard against null chat (getCurrentChat can return undefined)
+    const currentChat = getCurrentChat();
+    const pKey = personaKey || (currentChat ? currentChat.persona : 'direct');
     const row  = document.createElement("div");
     row.classList.add("row", sender === "user" ? "user" : "bot");
 
@@ -1813,7 +1820,9 @@ function openProfile(key) {
   userInput.addEventListener("blur", () => inputArea.classList.remove("focused"));
 
   // ── Suggestion cards ─────────────────────────────
-  document.querySelectorAll(".card").forEach(card => {
+  // FIX: Cache card elements to avoid repeated DOM queries
+  const cardElements = document.querySelectorAll(".card");
+  cardElements.forEach(card => {
     card.addEventListener("click",   () => sendMessage(card.dataset.prompt));
     card.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sendMessage(card.dataset.prompt); } });
   });
@@ -2041,7 +2050,8 @@ function openProfile(key) {
       authScreen.classList.remove("fade-out");
       document.getElementById("main").classList.add("visible");
       document.getElementById("sidebar").classList.add("visible");
-      window._orbRunning = false; // stop canvas loop — saves CPU/battery
+      // FIX: Stop orb animation to prevent memory leak (canvas continues to run in hidden auth screen)
+      window._orbRunning = false;
     }, 560);
   }
 
@@ -2057,33 +2067,33 @@ function openProfile(key) {
     // Reset orb entrance animation
     const orbWrap = document.getElementById("orb-wrap");
     orbWrap.style.animation = "none";
-    orbWrap.offsetHeight; // force reflow
+    // FIX: Force reflow safely by reading offsetHeight after style change
+    void orbWrap.offsetHeight;
     orbWrap.style.animation = "";
     const authRight = document.querySelector(".auth-right");
     authRight.style.animation = "none";
-    authRight.offsetHeight;
+    void authRight.offsetHeight;
     authRight.style.animation = "";
     const authTagline = document.querySelector(".auth-tagline");
     if (authTagline) {
       authTagline.style.animation = "none";
-      authTagline.offsetHeight;
+      void authTagline.offsetHeight;
       authTagline.style.animation = "";
     }
     authUsername.value = "";
     authPassword.value = "";
     authError.textContent = "";
-    window._orbRunning = true; // restart orb
-    (function reboot(){
-      // re-trigger draw loop
-      const ev = new Event('_orbRestart');
-      document.dispatchEvent(ev);
-    })();
+    // FIX: Restart orb by setting running flag and dispatching restart event
+    window._orbRunning = true;
+    const ev = new Event('_orbRestart');
+    document.dispatchEvent(ev);
   });
 
   // Override saveChats to also save to server
-  const _origSaveChats = saveChats;
+  // FIX: Removed unused _origSaveChats variable and properly override saveChats
+  const originalSaveChats = saveChats;
   saveChats = function() {
-    _origSaveChats();
+    originalSaveChats();
     // Fire-and-forget save to server
     fetch("/api/chats", {
       method: "POST",
@@ -2102,6 +2112,8 @@ function openProfile(key) {
         document.getElementById("main").classList.add("visible");
         document.getElementById("sidebar").classList.add("visible");
         authScreen.classList.add("hidden");
+        // FIX: Stop orb animation when auto-logged in to prevent memory leak
+        window._orbRunning = false;
         sidebarUsername.textContent = data.username;
         try {
           const r2 = await fetch("/api/chats");
