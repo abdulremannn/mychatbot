@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"></noscript>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Selina</title>
 <style>
@@ -36,7 +40,7 @@
     margin: 0;
     background: var(--bg);
     color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-size: 15px;
     -webkit-font-smoothing: antialiased;
     display: flex;
@@ -55,67 +59,254 @@
   #auth-screen {
     position: fixed; inset: 0; z-index: 200;
     background: var(--bg);
-    display: flex; align-items: center; justify-content: center;
-    padding: 24px;
+    display: flex; align-items: stretch; justify-content: center;
+    overflow: hidden;
   }
   #auth-screen.hidden { display: none; }
 
-  .auth-card {
-    width: 100%; max-width: 360px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid var(--border);
-    border-radius: 24px;
-    padding: 36px 32px;
-    display: flex; flex-direction: column; gap: 16px;
+  /* ── Auth entrance animations ── */
+  @keyframes orbEntrance {
+    0%   { opacity:0; transform:scale(0.6); filter:blur(24px); }
+    60%  { opacity:1; transform:scale(1.04); filter:blur(0px); }
+    100% { opacity:1; transform:scale(1);   filter:blur(0px); }
+  }
+  @keyframes fadeSlideUp {
+    0%   { opacity:0; transform:translateY(22px); }
+    100% { opacity:1; transform:translateY(0); }
+  }
+  @keyframes fadeIn {
+    0%   { opacity:0; }
+    100% { opacity:1; }
+  }
+  @keyframes screenFadeOut {
+    0%   { opacity:1; }
+    100% { opacity:0; pointer-events:none; }
+  }
+  @keyframes mainFadeIn {
+    0%   { opacity:0; transform:scale(0.98); }
+    100% { opacity:1; transform:scale(1); }
   }
 
-  .auth-logo {
-    font-size: 28px; font-weight: 800; letter-spacing: -0.03em;
-    color: var(--text); text-align: center; margin-bottom: 4px;
-    background: linear-gradient(135deg,#fff 30%,var(--accent-2) 110%);
+  /* Orb entrance */
+  #orb-wrap {
+    opacity: 0;
+    animation: orbEntrance 1.1s cubic-bezier(0.34,1.2,0.64,1) 0.1s forwards;
+  }
+
+  /* Tagline fades in after orb */
+  .auth-tagline {
+    opacity: 0;
+    animation: fadeSlideUp 0.7s ease 0.9s forwards;
+  }
+
+  /* Right panel form fades in */
+  .auth-right {
+    opacity: 0;
+    animation: fadeSlideUp 0.65s ease 0.55s forwards;
+  }
+
+  /* Input glow on focus — enhanced */
+  .auth-input:focus {
+    border-color: var(--accent-1);
+    background: rgba(255,255,255,0.07);
+    box-shadow: 0 0 0 3px var(--accent-dim), 0 0 24px var(--accent-dim);
+  }
+
+  /* Button glow pulse on hover */
+  .auth-btn:hover {
+    opacity: 0.92;
+    box-shadow: 0 6px 32px var(--accent-dim), 0 0 40px var(--accent-dim);
+  }
+
+  /* Auth screen fade out on login */
+  #auth-screen.fade-out {
+    animation: screenFadeOut 0.55s ease forwards;
+  }
+
+  /* Main app fade in */
+  #main, #sidebar {
+    opacity: 0;
+    animation: none;
+  }
+  #main.visible {
+    animation: mainFadeIn 0.65s ease 0.1s forwards;
+  }
+  #sidebar.visible {
+    animation: fadeIn 0.65s ease 0.2s forwards;
+  }
+
+  /* Ambient glow inside auth */
+  #auth-screen::before {
+    content: "";
+    position: absolute; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 70% 40%, rgba(91,141,239,0.12), transparent),
+      radial-gradient(ellipse 40% 60% at 20% 70%, rgba(111,227,214,0.08), transparent);
+    pointer-events: none;
+  }
+
+  /* Left panel — branding */
+  .auth-left {
+    display: none;
+    position: relative; z-index: 1;
+    flex: 1; align-items: center; justify-content: center;
+    flex-direction: column; gap: 32px;
+    padding: 60px;
+    border-right: 1px solid var(--border-soft);
+  }
+  @media (min-width: 860px) { .auth-left { display: flex; } }
+
+  .auth-orb {
+    width: clamp(200px, 28vw, 320px); height: clamp(200px, 28vw, 320px);
+    border-radius: 50%; position: relative; flex-shrink: 0;
+  }
+  .auth-orb-inner {
+    width: 100%; height: 100%; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+    opacity: 0.18;
+    animation: orbPulse 4s ease-in-out infinite;
+  }
+  .auth-orb-ring {
+    position: absolute; inset: -16px; border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.07);
+    animation: orbRing 4s ease-in-out infinite;
+  }
+  .auth-orb-ring-2 {
+    position: absolute; inset: -36px; border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.04);
+    animation: orbRing 4s ease-in-out infinite 0.5s;
+  }
+  .auth-orb-logo {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 52px; font-weight: 900; letter-spacing: -0.04em;
+    background: linear-gradient(135deg, #fff 30%, var(--accent-2) 110%);
     -webkit-background-clip: text; background-clip: text; color: transparent;
   }
+  @keyframes orbPulse {
+    0%,100% { transform: scale(1); opacity: 0.18; }
+    50% { transform: scale(1.06); opacity: 0.25; }
+  }
+  @keyframes orbRing {
+    0%,100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.04); opacity: 0.6; }
+  }
 
+  .auth-tagline {
+    text-align: center; max-width: 280px;
+  }
+  .auth-tagline h2 {
+    font-size: 20px; font-weight: 500; letter-spacing: -0.01em;
+    color: var(--text); margin: 0 0 10px 0;
+  }
+  .auth-tagline p {
+    font-size: 13.5px; color: var(--text-faint); line-height: 1.6; margin: 0;
+  }
+
+  /* Right panel — form */
+  .auth-right {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 440px;
+    display: flex; align-items: center; justify-content: center;
+    padding: 32px 24px;
+    padding-top: max(32px, env(safe-area-inset-top));
+    padding-bottom: max(32px, env(safe-area-inset-bottom));
+    padding-left: max(24px, env(safe-area-inset-left));
+    padding-right: max(24px, env(safe-area-inset-right));
+  }
+  @media (min-width: 860px) { .auth-right { width: 440px; flex-shrink: 0; } }
+
+  .auth-card {
+    width: 100%; max-width: 380px;
+    display: flex; flex-direction: column; gap: 0;
+  }
+
+  .auth-card-header {
+    margin-bottom: 32px;
+  }
+  .auth-logo {
+    font-size: 26px; font-weight: 600; letter-spacing: -0.02em;
+    background: linear-gradient(135deg,#fff 30%,var(--accent-2) 110%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    margin: 0 0 6px 0; display: block;
+  }
   .auth-subtitle {
-    font-size: 13px; color: var(--text-faint);
-    text-align: center; margin-bottom: 8px;
+    font-size: 14px; color: var(--text-faint); margin: 0;
+    transition: color 0.2s ease;
   }
 
-  .auth-input {
-    background: rgba(255,255,255,0.05); border: 1px solid var(--border);
-    border-radius: 12px; color: var(--text);
-    font-size: 15px; font-family: inherit;
-    padding: 13px 16px; outline: none; width: 100%;
-    transition: border-color 0.15s ease;
+  .auth-fields { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+
+  .auth-field {
+    position: relative;
   }
-  .auth-input:focus { border-color: var(--accent-1); }
+  .auth-field-label {
+    display: block; font-size: 11.5px; font-weight: 600;
+    color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase;
+    margin-bottom: 7px;
+  }
+  .auth-input {
+    background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+    border-radius: 12px; color: var(--text);
+    font-size: 16px; font-family: inherit;
+    padding: 13px 16px; outline: none; width: 100%;
+    transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+  }
+  .auth-input:focus {
+    border-color: var(--accent-1);
+    background: rgba(255,255,255,0.06);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+  }
   .auth-input::placeholder { color: var(--text-faint); }
+  .auth-input.error { border-color: #FF8A80; box-shadow: 0 0 0 3px rgba(255,138,128,0.15); }
+
+  .auth-error {
+    font-size: 12.5px; color: #FF8A80;
+    min-height: 18px; margin-bottom: 4px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .auth-error::before {
+    content: ""; width: 5px; height: 5px; border-radius: 50%;
+    background: #FF8A80; flex-shrink: 0;
+    display: none;
+  }
+  .auth-error:not(:empty)::before { display: block; }
 
   .auth-btn {
     background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
     border: none; border-radius: 12px;
     color: #07070C; font-size: 15px; font-weight: 700;
-    padding: 14px; cursor: pointer; width: 100%;
-    transition: opacity 0.12s ease, transform 0.08s ease;
+    padding: 15px; cursor: pointer; width: 100%;
+    letter-spacing: 0.01em;
+    transition: opacity 0.12s ease, transform 0.1s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 20px var(--accent-dim);
+    margin-bottom: 20px;
   }
-  .auth-btn:hover { opacity: 0.88; }
+  .auth-btn:hover { opacity: 0.88; box-shadow: 0 6px 28px var(--accent-dim); }
   .auth-btn:active { transform: scale(0.97); }
-  .auth-btn:disabled { opacity: 0.4; cursor: default; }
+  .auth-btn:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
 
-  .auth-error {
-    font-size: 12.5px; color: #FF8A80;
-    text-align: center; min-height: 18px;
+  .auth-divider {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 20px;
+  }
+  .auth-divider-line {
+    flex: 1; height: 1px; background: var(--border-soft);
+  }
+  .auth-divider-text {
+    font-size: 12px; color: var(--text-faint); white-space: nowrap;
   }
 
   .auth-switch {
-    font-size: 13px; color: var(--text-faint);
-    text-align: center;
+    font-size: 13.5px; color: var(--text-faint);
+    text-align: center; line-height: 1.5;
   }
   .auth-switch button {
     background: none; border: none; color: var(--accent-2);
-    font-size: 13px; cursor: pointer; padding: 0;
-    text-decoration: underline;
+    font-size: 13.5px; font-weight: 600; cursor: pointer; padding: 0;
+    transition: opacity 0.12s ease;
   }
+  .auth-switch button:hover { opacity: 0.75; }
 
   .auth-user-bar {
     display: flex; align-items: center; justify-content: space-between;
@@ -128,8 +319,7 @@
   .auth-logout-btn {
     background: none; border: none; color: var(--text-faint);
     font-size: 11px; cursor: pointer; padding: 2px 6px;
-    border-radius: 4px;
-    transition: color 0.12s ease;
+    border-radius: 4px; transition: color 0.12s ease;
   }
   .auth-logout-btn:hover { color: #FF8A80; }
 
@@ -792,16 +982,288 @@
 
   <!-- Auth screen -->
   <div id="auth-screen">
-    <div class="auth-card">
-      <div class="auth-logo">Selina</div>
-      <div class="auth-subtitle" id="auth-subtitle">Sign in to your account</div>
-      <input class="auth-input" id="auth-username" type="text" placeholder="Username" autocomplete="username" />
-      <input class="auth-input" id="auth-password" type="password" placeholder="Password" autocomplete="current-password" />
-      <div class="auth-error" id="auth-error"></div>
-      <button class="auth-btn" id="auth-submit">Sign in</button>
-      <div class="auth-switch">
-        <span id="auth-switch-text">Don't have an account?</span>
-        <button id="auth-switch-btn">Register</button>
+    <div class="auth-left">
+      <div class="auth-orb" id="orb-wrap" style="display:flex;align-items:center;justify-content:center;width:320px;height:320px;position:relative;flex-shrink:0;">
+        <canvas id="selina-orb" style="border-radius:50%;position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
+      </div>
+
+<script>
+(function(){
+  const wrap = document.getElementById('orb-wrap');
+  const canvas = document.getElementById('selina-orb');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  // ── Retina / DPR aware sizing ──
+  let DPR = Math.min(window.devicePixelRatio||1, 2);
+  let W, H, CX, CY, R;
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio||1, 2);
+    const wrapSize = wrap.getBoundingClientRect();
+    const size = Math.min(wrapSize.width, wrapSize.height) || 320;
+    W = size * DPR; H = size * DPR;
+    canvas.width  = W;
+    canvas.height = H;
+    CX = W/2; CY = H/2;
+    R  = W * 0.39;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  let t = 0;
+  let mouse = {x: CX, y: CY};
+  // Smoothed mouse (lerp target)
+  let smx = 0, smy = 0;
+
+  // State: idle | typing | clicking
+  let orbState = 'idle';
+  let stateIntensity = 0; // 0..1 lerp target
+
+  // ── Input/button reactivity ──
+  document.addEventListener('input', function(e) {
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+      orbState = 'typing';
+      clearTimeout(window._orbTypingTimer);
+      window._orbTypingTimer = setTimeout(() => { orbState = 'idle'; }, 1200);
+    }
+  });
+  document.addEventListener('mousedown', function(e) {
+    if (e.target && (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT')) {
+      orbState = 'clicking';
+      clearTimeout(window._orbClickTimer);
+      window._orbClickTimer = setTimeout(() => { orbState = 'idle'; }, 700);
+    }
+  });
+  document.addEventListener('touchstart', function(e) {
+    if (e.target && (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT')) {
+      orbState = 'clicking';
+      clearTimeout(window._orbClickTimer);
+      window._orbClickTimer = setTimeout(() => { orbState = 'idle'; }, 700);
+    }
+  }, {passive:true});
+
+  // ── Mouse tracking — full screen ──
+  document.addEventListener('mousemove', function(e) {
+    mouse.x = ((e.clientX / window.innerWidth)  - 0.5) * W * 2.2 + CX;
+    mouse.y = ((e.clientY / window.innerHeight) - 0.5) * H * 2.2 + CY;
+  });
+
+  // ── Touch tracking — full screen ──
+  document.addEventListener('touchmove', function(e) {
+    const touch = e.touches[0];
+    mouse.x = ((touch.clientX / window.innerWidth)  - 0.5) * W * 2.2 + CX;
+    mouse.y = ((touch.clientY / window.innerHeight) - 0.5) * H * 2.2 + CY;
+  }, {passive:true});
+
+  // ── Dots ──
+  const DOTS = 420;
+  const dots = [];
+  for (let i = 0; i < DOTS; i++) {
+    const phi   = Math.acos(1 - 2*(i+0.5)/DOTS);
+    const theta = Math.PI*(1+Math.sqrt(5))*i;
+    dots.push({
+      phi, theta,
+      baseTheta: theta,
+      size:  0.7 + Math.random()*1.4,
+      speed: 0.0003 + Math.random()*0.0005,
+      phase: Math.random()*Math.PI*2,
+      brightness: 0.6 + Math.random()*0.4
+    });
+  }
+
+  const RINGS = 10;
+  const LNGS  = 14;
+
+  function project(phi, theta, tiltX, tiltY, scale) {
+    let x = Math.sin(phi)*Math.cos(theta);
+    let y = Math.cos(phi);
+    let z = Math.sin(phi)*Math.sin(theta);
+    const rx = tiltY*0.45, ry = tiltX*0.45;
+    const cosX = Math.cos(rx), sinX = Math.sin(rx);
+    const ny = y*cosX - z*sinX, nz = z*cosX + y*sinX; y=ny; z=nz;
+    const cosY = Math.cos(ry), sinY = Math.sin(ry);
+    const nx = x*cosY + nz*sinY; z = nz*cosY - x*sinY; x=nx;
+    return { sx: CX+x*R*scale, sy: CY-y*R*scale, z, depth:(z+1)/2 };
+  }
+
+  function draw() {
+    t += 0.009;
+
+    // Lerp smoothed mouse
+    smx += (mouse.x - smx) * 0.06;
+    smy += (mouse.y - smy) * 0.06;
+
+    // State intensity lerp
+    const targetIntensity = orbState === 'idle' ? 0 : orbState === 'typing' ? 0.6 : 1.0;
+    stateIntensity += (targetIntensity - stateIntensity) * 0.08;
+
+    ctx.clearRect(0, 0, W, H);
+
+    const breathe = 1 + 0.022*Math.sin(t*1.1) + stateIntensity*0.04;
+    const clickPulse = 1 + stateIntensity * (orbState==='clicking' ? 0.07 : 0);
+    const scale = breathe * clickPulse;
+
+    const mx = (smx - CX) / CX;
+    const my = (smy - CY) / CY;
+
+    // ── Outer glow layers (more layers = richer) ──
+    const glowBoost = 1 + stateIntensity * 0.8;
+    for (let i = 4; i >= 1; i--) {
+      const gg = ctx.createRadialGradient(CX, CY, R*0.4*scale, CX, CY, R*scale*(1+i*0.42));
+      const a = (0.06 - i*0.011) * glowBoost;
+      gg.addColorStop(0,   `rgba(80,160,255,${Math.min(a,0.25)})`);
+      gg.addColorStop(0.45,`rgba(100,60,255,${Math.min(a*0.6,0.15)})`);
+      gg.addColorStop(1,   'rgba(0,0,0,0)');
+      ctx.beginPath();
+      ctx.arc(CX, CY, R*scale*(1+i*0.42), 0, Math.PI*2);
+      ctx.fillStyle = gg; ctx.fill();
+    }
+
+    // ── Sphere base ──
+    const bg = ctx.createRadialGradient(CX-R*0.18, CY-R*0.18, 2, CX, CY, R*scale);
+    bg.addColorStop(0,   'rgba(16,22,55,0.94)');
+    bg.addColorStop(0.55,'rgba(8,11,32,0.97)');
+    bg.addColorStop(1,   'rgba(3,5,18,1)');
+    ctx.beginPath(); ctx.arc(CX, CY, R*scale, 0, Math.PI*2);
+    ctx.fillStyle = bg; ctx.fill();
+
+    // ── Latitude rings ──
+    for (let r = 1; r < RINGS; r++) {
+      const phi   = (r/RINGS)*Math.PI;
+      const ringR = Math.sin(phi)*R*scale;
+      const ringY = CY - Math.cos(phi)*R*scale;
+      const tiltShift = mx*R*scale*0.20*Math.sin(phi);
+      const depth = (Math.cos(phi*my*0.5 + t*0.25)+1)/2;
+      const alpha = (0.07 + depth*0.20) * (1 + stateIntensity*0.5);
+      const hue   = 200 + r*11 + stateIntensity*20;
+      ctx.beginPath();
+      ctx.ellipse(CX+tiltShift, ringY, ringR, ringR*0.19, mx*0.22, 0, Math.PI*2);
+      ctx.strokeStyle = `hsla(${hue},100%,72%,${Math.min(alpha,0.55)})`;
+      ctx.lineWidth = 0.8 * DPR * 0.5;
+      ctx.stroke();
+    }
+
+    // ── Longitude lines ──
+    for (let l = 0; l < LNGS; l++) {
+      const theta = ((l/LNGS)*Math.PI*2) + t*0.07;
+      ctx.beginPath();
+      let first = true;
+      for (let k = 0; k <= 32; k++) {
+        const phi = (k/32)*Math.PI;
+        const p = project(phi, theta, mx, my, scale);
+        if (p.depth < 0.02) continue;
+        if (first) { ctx.moveTo(p.sx, p.sy); first=false; }
+        else ctx.lineTo(p.sx, p.sy);
+      }
+      ctx.strokeStyle = `rgba(100,200,255,${0.05 + stateIntensity*0.06})`;
+      ctx.lineWidth = 0.4 * DPR * 0.5;
+      ctx.stroke();
+    }
+
+    // ── Glowing dots ──
+    dots.forEach(d => {
+      d.theta = d.baseTheta + t*d.speed*55;
+      const p = project(d.phi, d.theta, mx, my, scale);
+      if (p.depth < 0.04) return;
+
+      const dx = p.sx - smx, dy = p.sy - smy;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      // Wider influence radius for whole-screen feel
+      const mousePull = Math.max(0, 1 - dist/(R*0.9)) * (1 + stateIntensity*0.5);
+
+      const pulse = d.brightness * (0.55 + 0.45*Math.sin(t*2.2 + d.phase));
+      const typingPulse = orbState==='typing' ? 0.3*Math.sin(t*8+d.phase) : 0;
+      const alpha = Math.min(1, (0.22 + p.depth*0.65 + mousePull*0.55 + typingPulse) * pulse);
+      const size  = (d.size*(0.45 + p.depth*0.95) + mousePull*3.5) * scale * (DPR > 1 ? 1 : 0.85);
+
+      const hue = 190 + p.depth*65 + mousePull*45 + stateIntensity*15;
+      const lit  = 52  + p.depth*38 + mousePull*10;
+
+      // Outer glow halo
+      if (size > 0.6) {
+        const haloR = size*3.8 + mousePull*5;
+        const gd = ctx.createRadialGradient(p.sx, p.sy, 0, p.sx, p.sy, haloR);
+        gd.addColorStop(0, `hsla(${hue},100%,${lit}%,${alpha*0.65})`);
+        gd.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.beginPath(); ctx.arc(p.sx, p.sy, haloR, 0, Math.PI*2);
+        ctx.fillStyle = gd; ctx.fill();
+      }
+
+      // Core dot
+      ctx.beginPath(); ctx.arc(p.sx, p.sy, size*0.9, 0, Math.PI*2);
+      ctx.fillStyle = `hsla(${hue},100%,${lit+22}%,${Math.min(1,alpha*1.5)})`;
+      ctx.fill();
+    });
+
+    // ── Rim glow ──
+    const rimBoost = 0.18 + stateIntensity*0.14;
+    const rim = ctx.createRadialGradient(CX, CY, R*0.70*scale, CX, CY, R*1.02*scale);
+    rim.addColorStop(0,   'rgba(0,0,0,0)');
+    rim.addColorStop(0.65,`rgba(55,145,255,${0.05+Math.abs(mx)*0.04})`);
+    rim.addColorStop(1,   `rgba(110,70,255,${rimBoost+Math.abs(mx)*0.08})`);
+    ctx.beginPath(); ctx.arc(CX, CY, R*scale, 0, Math.PI*2);
+    ctx.fillStyle = rim; ctx.fill();
+
+    // ── Specular highlight ──
+    const hl = ctx.createRadialGradient(
+      CX - R*0.26 + mx*14, CY - R*0.26 + my*14, 1,
+      CX - R*0.10 + mx*6,  CY - R*0.10 + my*6,  R*0.52
+    );
+    hl.addColorStop(0, 'rgba(210,235,255,0.14)');
+    hl.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.beginPath(); ctx.arc(CX, CY, R*scale, 0, Math.PI*2);
+    ctx.fillStyle = hl; ctx.fill();
+
+    requestAnimationFrame(draw);
+  }
+  window._orbRunning = true;
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) { draw(); }
+  document.addEventListener('_orbRestart', function() {
+    if (!window._orbRunning) { window._orbRunning = true; draw(); }
+  });
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+      window._orbRunning = false;
+    } else if (!document.getElementById('auth-screen').classList.contains('hidden')) {
+      window._orbRunning = true; draw();
+    }
+  });
+})();
+</script>
+
+      <div class="auth-tagline">
+        <p style="font-size:14px;font-weight:400;color:var(--text);margin:0;">Far better than her!</p>
+        <p>Four personas, not personalities!</p>
+      </div>
+    </div>
+    <div class="auth-right">
+      <div class="auth-card">
+        <div class="auth-card-header">
+          <span class="auth-logo">Selina</span>
+          <p class="auth-subtitle" id="auth-subtitle">Welcome back sign in to continue</p>
+        </div>
+        <div class="auth-fields">
+          <div class="auth-field">
+            <label class="auth-field-label" for="auth-username">Username</label>
+            <input class="auth-input" id="auth-username" type="text" placeholder="Enter your username" autocomplete="username" />
+          </div>
+          <div class="auth-field">
+            <label class="auth-field-label" for="auth-password">Password</label>
+            <input class="auth-input" id="auth-password" type="password" placeholder="Enter your password" autocomplete="current-password" />
+          </div>
+        </div>
+        <div class="auth-error" id="auth-error"></div>
+        <button class="auth-btn" id="auth-submit">Sign in</button>
+        <div class="auth-divider">
+          <div class="auth-divider-line"></div>
+          <span class="auth-divider-text">or</span>
+          <div class="auth-divider-line"></div>
+        </div>
+        <div class="auth-switch">
+          <span id="auth-switch-text">Don't have an account?</span>
+          <button id="auth-switch-btn">Create one</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1491,12 +1953,12 @@ function openProfile(key) {
     isRegisterMode = !isRegisterMode;
     authError.textContent = "";
     if (isRegisterMode) {
-      authSubtitle.textContent = "Create your account";
+      authSubtitle.textContent = "Create an account to get started";
       authSubmit.textContent = "Register";
       authSwitchTxt.textContent = "Already have an account?";
       authSwitchBtn.textContent = "Sign in";
     } else {
-      authSubtitle.textContent = "Sign in to your account";
+      authSubtitle.textContent = "Welcome back — sign in to continue";
       authSubmit.textContent = "Sign in";
       authSwitchTxt.textContent = "Don't have an account?";
       authSwitchBtn.textContent = "Register";
@@ -1546,17 +2008,51 @@ function openProfile(key) {
     } catch(e) {}
     renderChatList();
     renderActiveChat();
-    authScreen.classList.add("hidden");
+
+    // Fade out auth screen, then fade in main app
+    authScreen.classList.add("fade-out");
+    setTimeout(() => {
+      authScreen.classList.add("hidden");
+      authScreen.classList.remove("fade-out");
+      document.getElementById("main").classList.add("visible");
+      document.getElementById("sidebar").classList.add("visible");
+      window._orbRunning = false; // stop canvas loop — saves CPU/battery
+    }, 560);
   }
 
   logoutBtn.addEventListener("click", async () => {
     await fetch("/auth/logout", { method: "POST" });
     allChats = {};
     currentChatId = null;
+    // Reset main/sidebar visibility for re-entry animation
+    document.getElementById("main").classList.remove("visible");
+    document.getElementById("sidebar").classList.remove("visible");
     authScreen.classList.remove("hidden");
+    authScreen.style.opacity = "1";
+    // Reset orb entrance animation
+    const orbWrap = document.getElementById("orb-wrap");
+    orbWrap.style.animation = "none";
+    orbWrap.offsetHeight; // force reflow
+    orbWrap.style.animation = "";
+    const authRight = document.querySelector(".auth-right");
+    authRight.style.animation = "none";
+    authRight.offsetHeight;
+    authRight.style.animation = "";
+    const authTagline = document.querySelector(".auth-tagline");
+    if (authTagline) {
+      authTagline.style.animation = "none";
+      authTagline.offsetHeight;
+      authTagline.style.animation = "";
+    }
     authUsername.value = "";
     authPassword.value = "";
     authError.textContent = "";
+    window._orbRunning = true; // restart orb
+    (function reboot(){
+      // re-trigger draw loop
+      const ev = new Event('_orbRestart');
+      document.dispatchEvent(ev);
+    })();
   });
 
   // Override saveChats to also save to server
@@ -1577,7 +2073,23 @@ function openProfile(key) {
       const res = await fetch("/auth/me");
       const data = await res.json();
       if (data.loggedIn) {
-        await loadUserChats(data.username);
+        // Skip animations for auto-login — show main immediately
+        document.getElementById("main").classList.add("visible");
+        document.getElementById("sidebar").classList.add("visible");
+        authScreen.classList.add("hidden");
+        sidebarUsername.textContent = data.username;
+        try {
+          const r2 = await fetch("/api/chats");
+          if (r2.ok) {
+            const serverChats = await r2.json();
+            if (Object.keys(serverChats).length > 0) {
+              allChats = serverChats;
+              currentChatId = Object.keys(allChats)[0];
+            } else { createNewChat(); }
+          }
+        } catch(e) {}
+        renderChatList();
+        renderActiveChat();
       }
     } catch(e) {}
   })();
