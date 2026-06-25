@@ -51,6 +51,87 @@
   button:focus-visible, textarea:focus-visible, .chat-item:focus-visible, .card:focus-visible {
     outline: 2px solid var(--accent-2); outline-offset: 2px;
   }
+/* ── Auth screen ── */
+  #auth-screen {
+    position: fixed; inset: 0; z-index: 200;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  #auth-screen.hidden { display: none; }
+
+  .auth-card {
+    width: 100%; max-width: 360px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 36px 32px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+
+  .auth-logo {
+    font-size: 28px; font-weight: 800; letter-spacing: -0.03em;
+    color: var(--text); text-align: center; margin-bottom: 4px;
+    background: linear-gradient(135deg,#fff 30%,var(--accent-2) 110%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+
+  .auth-subtitle {
+    font-size: 13px; color: var(--text-faint);
+    text-align: center; margin-bottom: 8px;
+  }
+
+  .auth-input {
+    background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+    border-radius: 12px; color: var(--text);
+    font-size: 15px; font-family: inherit;
+    padding: 13px 16px; outline: none; width: 100%;
+    transition: border-color 0.15s ease;
+  }
+  .auth-input:focus { border-color: var(--accent-1); }
+  .auth-input::placeholder { color: var(--text-faint); }
+
+  .auth-btn {
+    background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+    border: none; border-radius: 12px;
+    color: #07070C; font-size: 15px; font-weight: 700;
+    padding: 14px; cursor: pointer; width: 100%;
+    transition: opacity 0.12s ease, transform 0.08s ease;
+  }
+  .auth-btn:hover { opacity: 0.88; }
+  .auth-btn:active { transform: scale(0.97); }
+  .auth-btn:disabled { opacity: 0.4; cursor: default; }
+
+  .auth-error {
+    font-size: 12.5px; color: #FF8A80;
+    text-align: center; min-height: 18px;
+  }
+
+  .auth-switch {
+    font-size: 13px; color: var(--text-faint);
+    text-align: center;
+  }
+  .auth-switch button {
+    background: none; border: none; color: var(--accent-2);
+    font-size: 13px; cursor: pointer; padding: 0;
+    text-decoration: underline;
+  }
+
+  .auth-user-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 10px; margin-bottom: 6px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-sm);
+    font-size: 12px; color: var(--text-muted);
+  }
+  .auth-logout-btn {
+    background: none; border: none; color: var(--text-faint);
+    font-size: 11px; cursor: pointer; padding: 2px 6px;
+    border-radius: 4px;
+    transition: color 0.12s ease;
+  }
+  .auth-logout-btn:hover { color: #FF8A80; }
 
   /* ── Ambient ── */
   .ambient { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
@@ -709,7 +790,21 @@
 </head>
 <body data-persona="direct">
 
-  <div class="ambient">
+  <!-- Auth screen -->
+  <div id="auth-screen">
+    <div class="auth-card">
+      <div class="auth-logo">Selina</div>
+      <div class="auth-subtitle" id="auth-subtitle">Sign in to your account</div>
+      <input class="auth-input" id="auth-username" type="text" placeholder="Username" autocomplete="username" />
+      <input class="auth-input" id="auth-password" type="password" placeholder="Password" autocomplete="current-password" />
+      <div class="auth-error" id="auth-error"></div>
+      <button class="auth-btn" id="auth-submit">Sign in</button>
+      <div class="auth-switch">
+        <span id="auth-switch-text">Don't have an account?</span>
+        <button id="auth-switch-btn">Register</button>
+      </div>
+    </div>
+  </div>
     <div class="glow glow-1"></div>
     <div class="glow glow-2"></div>
     <div class="stars"></div>
@@ -719,6 +814,7 @@
 
   <div id="sidebar">
     <button id="new-chat-btn">+ New chat</button>
+    <div class="auth-user-bar"><span id="sidebar-username"></span><button class="auth-logout-btn" id="logout-btn">Sign out</button></div>
     <input id="search-input" type="text" placeholder="Search chats..." autocomplete="off" />
     <div id="chat-list"></div>
   </div>
@@ -1376,6 +1472,114 @@ function openProfile(key) {
   userInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   });
+  // ── Auth ────────────────────────────────────────
+  const authScreen    = document.getElementById("auth-screen");
+  const authUsername  = document.getElementById("auth-username");
+  const authPassword  = document.getElementById("auth-password");
+  const authSubmit    = document.getElementById("auth-submit");
+  const authError     = document.getElementById("auth-error");
+  const authSubtitle  = document.getElementById("auth-subtitle");
+  const authSwitchBtn = document.getElementById("auth-switch-btn");
+  const authSwitchTxt = document.getElementById("auth-switch-text");
+  const logoutBtn     = document.getElementById("logout-btn");
+  const sidebarUsername = document.getElementById("sidebar-username");
+
+  let isRegisterMode = false;
+
+  authSwitchBtn.addEventListener("click", () => {
+    isRegisterMode = !isRegisterMode;
+    authError.textContent = "";
+    if (isRegisterMode) {
+      authSubtitle.textContent = "Create your account";
+      authSubmit.textContent = "Register";
+      authSwitchTxt.textContent = "Already have an account?";
+      authSwitchBtn.textContent = "Sign in";
+    } else {
+      authSubtitle.textContent = "Sign in to your account";
+      authSubmit.textContent = "Sign in";
+      authSwitchTxt.textContent = "Don't have an account?";
+      authSwitchBtn.textContent = "Register";
+    }
+  });
+
+  authSubmit.addEventListener("click", handleAuth);
+  authPassword.addEventListener("keydown", (e) => { if (e.key === "Enter") handleAuth(); });
+
+  async function handleAuth() {
+    const username = authUsername.value.trim();
+    const password = authPassword.value.trim();
+    if (!username || !password) { authError.textContent = "Fill in both fields."; return; }
+    authSubmit.disabled = true;
+    authError.textContent = "";
+    try {
+      const res = await fetch(isRegisterMode ? "/auth/register" : "/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      if (!res.ok) { authError.textContent = data.error || "Something went wrong."; return; }
+      await loadUserChats(data.username);
+    } catch(e) {
+      authError.textContent = "Connection error.";
+    } finally {
+      authSubmit.disabled = false;
+    }
+  }
+
+  async function loadUserChats(username) {
+    sidebarUsername.textContent = username;
+    // Load chats from server
+    try {
+      const res = await fetch("/api/chats");
+      if (res.ok) {
+        const serverChats = await res.json();
+        if (Object.keys(serverChats).length > 0) {
+          allChats = serverChats;
+          const keys = Object.keys(allChats);
+          currentChatId = keys[0];
+        } else {
+          createNewChat();
+        }
+      }
+    } catch(e) {}
+    renderChatList();
+    renderActiveChat();
+    authScreen.classList.add("hidden");
+  }
+
+  logoutBtn.addEventListener("click", async () => {
+    await fetch("/auth/logout", { method: "POST" });
+    allChats = {};
+    currentChatId = null;
+    authScreen.classList.remove("hidden");
+    authUsername.value = "";
+    authPassword.value = "";
+    authError.textContent = "";
+  });
+
+  // Override saveChats to also save to server
+  const _origSaveChats = saveChats;
+  saveChats = function() {
+    _origSaveChats();
+    // Fire-and-forget save to server
+    fetch("/api/chats", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(allChats)
+    }).catch(() => {});
+  };
+
+  // Check if already logged in on page load
+  (async () => {
+    try {
+      const res = await fetch("/auth/me");
+      const data = await res.json();
+      if (data.loggedIn) {
+        await loadUserChats(data.username);
+      }
+    } catch(e) {}
+  })();
 </script>
 
 </body>

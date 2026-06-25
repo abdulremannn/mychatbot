@@ -4,6 +4,11 @@ from groq import Groq
 from dotenv import load_dotenv
 import os
 from itertools import cycle
+import sqlite3
+import hashlib
+import secrets
+from functools import wraps
+from flask import session
 
 load_dotenv()
 
@@ -28,6 +33,54 @@ if not GROQ_API_KEYS:
 print(f"Loaded {len(GROQ_API_KEYS)} API key(s)")
 key_cycle = cycle(GROQ_API_KEYS)
 client = Groq(api_key=next(key_cycle))
+
+app.secret_key = os.getenv("SECRET_KEY", "fallback-secret-change-this")
+
+# ── Database setup ───────────────────────────────
+DB_PATH = os.path.join(os.path.dirname(__file__), "selina.db")
+
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    with get_db() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS chats (
+                id TEXT NOT NULL,
+                user_id INTEGER NOT NULL,
+                title TEXT DEFAULT 'New chat',
+                persona TEXT DEFAULT 'direct',
+                messages TEXT DEFAULT '[]',
+                summary TEXT DEFAULT '',
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id, user_id),
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        """)
+        conn.commit()
+
+init_db()
+
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if "user_id" not in session:
+            return jsonify({"error": "Not logged in"}), 401
+        return f(*args, **kwargs)
+    return decorated
 
 BASE_RULES = (
     "You are Selina, a real woman. "
@@ -133,6 +186,110 @@ DEFAULT_PERSONA = "direct"
 @app.route("/")
 def home():
     return app.send_static_file("index.html")
+
+@app.route("/auth/register", methods=["POST"])
+def register():
+    data = request.json
+    username = (data.get("username") or "").strip().lower()
+    password = data.get("password") or ""
+    if not username or not password:
+        return jsonify({"error": "Username and password required"}), 400
+    if len(username) < 3:
+        return jsonify({"error": "Username must be at least 3 characters"}), 400
+    if len(password) < 6:
+        return jsonify({"error": "Password must be at least 6 characters"}), 400
+    try:
+        with get_db() as conn:
+            conn.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)",
+                         (username, hash_password(password)))
+            conn.commit()
+            user = conn.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
+            session["user_id"] = user["id"]
+            session["username"] = username
+        return jsonify({"ok": True, "username": username})
+    except sqlite3.IntegrityError:
+        return jsonify({"error": "Username already taken"}), 409
+
+@app.route("/auth/login", methods=["POST"])
+def login():
+    data = request.json
+    username = (data.get("username") or "").strip().lower()
+    password = data.get("password") or ""
+    with get_db() as conn:
+        user = conn.execute("SELECT * FROM users WHERE username = ? AND password_hash = ?",
+                            (username, hash_password(password))).fetchone()
+    if not user:
+        return jsonify({"error": "Invalid username or password"}), 401
+    session["user_id"] = user["id"]
+    session["username"] = user["username"]
+    return jsonify({"ok": True, "username": user["username"]})
+
+@app.route("/auth/logout", methods=["POST"])
+def logout():
+    session.clear()
+    return jsonify({"ok": True})
+
+@app.route("/auth/me")
+def me():
+    if "user_id" not in session:
+        return jsonify({"loggedIn": False})
+    return jsonify({"loggedIn": True, "username": session["username"]})
+
+@app.route("/api/chats", methods=["GET"])
+@login_required
+def get_chats():
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, title, persona, messages, summary FROM chats WHERE user_id = ? ORDER BY updated_at DESC",
+            (session["user_id"],)
+        ).fetchall()
+    chats = {}
+    for row in rows:
+        chats[row["id"]] = {
+            "id": row["id"],
+            "title": row["title"],
+            "persona": row["persona"],
+            "messages": json.loads(row["messages"]),
+            "summary": row["summary"] or ""
+        }
+    return jsonify(chats)
+
+@app.route("/api/chats", methods=["POST"])
+@login_required
+def save_chats():
+    data = request.json
+    if not data:
+        return jsonify({"ok": False}), 400
+    with get_db() as conn:
+        for chat_id, chat in data.items():
+            conn.execute("""
+                INSERT INTO chats (id, user_id, title, persona, messages, summary, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(id, user_id) DO UPDATE SET
+                    title=excluded.title,
+                    persona=excluded.persona,
+                    messages=excluded.messages,
+                    summary=excluded.summary,
+                    updated_at=CURRENT_TIMESTAMP
+            """, (
+                chat_id,
+                session["user_id"],
+                chat.get("title", "New chat"),
+                chat.get("persona", "direct"),
+                json.dumps(chat.get("messages", [])),
+                chat.get("summary", "")
+            ))
+        conn.commit()
+    return jsonify({"ok": True})
+
+@app.route("/api/chats/<chat_id>", methods=["DELETE"])
+@login_required
+def delete_chat(chat_id):
+    with get_db() as conn:
+        conn.execute("DELETE FROM chats WHERE id = ? AND user_id = ?",
+                     (chat_id, session["user_id"]))
+        conn.commit()
+    return jsonify({"ok": True})
 
 PERSONA_SETTINGS = {
     "direct":    {"temperature": 0.5,  "max_tokens": 1024},
