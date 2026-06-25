@@ -35,9 +35,13 @@ key_cycle = cycle(GROQ_API_KEYS)
 client = Groq(api_key=next(key_cycle))
 
 app.secret_key = os.getenv("SECRET_KEY", "fallback-secret-change-this")
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SECURE"] = True
+app.config["SESSION_COOKIE_NAME"] = "selina_session"
 
 # ── Database setup ───────────────────────────────
-DB_PATH = os.path.join(os.path.dirname(__file__), "selina.db")
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "selina.db")
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
