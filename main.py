@@ -265,6 +265,16 @@ def save_chats():
     if not data:
         return jsonify({"ok": False}), 400
     with get_db() as conn:
+        # Delete any chats that no longer exist on the client
+        if data:
+            placeholders = ",".join("?" * len(data))
+            conn.execute(
+                f"DELETE FROM chats WHERE user_id = ? AND id NOT IN ({placeholders})",
+                [session["user_id"]] + list(data.keys())
+            )
+        else:
+            conn.execute("DELETE FROM chats WHERE user_id = ?", (session["user_id"],))
+
         for chat_id, chat in data.items():
             conn.execute("""
                 INSERT INTO chats (id, user_id, title, persona, messages, summary, updated_at)
@@ -334,7 +344,8 @@ def chat():
             f"\n\n---\nCONVERSATION CONTEXT (stay consistent with this, never repeat it to the user):\n{summary.strip()}\n---"
         )
 
-    full_messages = [{"role": "system", "content": system_content}] + trim_history(history)
+    clean_history = [{"role": m["role"], "content": m["content"]} for m in trim_history(history)]
+    full_messages = [{"role": "system", "content": system_content}] + clean_history
 
     def generate():
         global client

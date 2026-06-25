@@ -667,7 +667,7 @@
   .user-msg {
     background: rgba(255,255,255,0.05); border: 1px solid var(--accent-1);
     color: var(--text); border-bottom-right-radius: 4px;
-    transition: border-color 0.3s ease; max-width: 72%;
+    transition: border-color 0.3s ease;
   }
   .bot-msg {
     background: rgba(255,255,255,0.05); border: 1px solid var(--border);
@@ -690,14 +690,19 @@
   }
   @keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:1} }
 
+  .bot-meta {
+    display: flex; align-items: center; gap: 6px;
+    margin-top: 3px;
+  }
   .copy-btn {
     background: none; border: none; color: var(--text-faint);
-    font-size: 11px; cursor: pointer; padding: 2px 6px;
-    border-radius: 4px; opacity: 0; align-self: flex-start;
+    font-size: 9.5px; cursor: pointer; padding: 0;
+    border-radius: 4px; opacity: 0;
     transition: opacity 0.12s ease, color 0.12s ease;
+    white-space: nowrap;
   }
   .row.bot:hover .copy-btn { opacity: 1; }
-  .copy-btn:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+  .copy-btn:hover { color: var(--text-muted); }
   @media (hover: none) { .copy-btn { opacity: 0.6; } }
 
   .retry-btn {
@@ -873,6 +878,14 @@
   #profile-close:hover { background: rgba(0,0,0,0.55); }
   #profile-close:active { transform: scale(0.9); }
 
+.msg-time {
+    font-size: 9.5px; color: var(--text-faint);
+    display: block; white-space: nowrap;
+    margin-top: 4px;
+  }
+  .row.user .msg-time { text-align: right; }
+  .row.bot  .msg-time { text-align: left; padding-left: 2px; }
+
   /* ── Reduced motion ── */
   @media (prefers-reduced-motion: reduce) {
     .row, .stream-chunk { animation: none; }
@@ -939,8 +952,8 @@
     .cards { grid-template-columns: 1fr; }
     #greeting-screen { padding-top: 12px; }
     .msg { font-size: 14px; }
-    .user-msg { max-width: 84%; }
-    .bot-msg-wrapper { max-width: 88%; }
+    .user-msg { max-width: 100%; }
+    .bot-msg-wrapper { max-width: 82%; }
     .msg-avatar { width: 30px; height: 30px; }
 
     #persona-picker {
@@ -1673,12 +1686,12 @@ function openProfile(key) {
       greetingScreen.style.display = "block";
     } else {
       greetingScreen.style.display = "none";
-      chat.messages.forEach(msg => addMessage(msg.content, msg.role === "user" ? "user" : "bot", chat.persona));
+      chat.messages.forEach(msg => addMessage(msg.content, msg.role === "user" ? "user" : "bot", chat.persona, msg.ts));
     }
   }
 
   // ── Add message ─────────────────────────────────
-  function addMessage(text, sender, personaKey) {
+  function addMessage(text, sender, personaKey, timestamp) {
     const pKey = personaKey || getCurrentChat().persona;
     const row  = document.createElement("div");
     row.classList.add("row", sender === "user" ? "user" : "bot");
@@ -1686,6 +1699,11 @@ function openProfile(key) {
     const div = document.createElement("div");
     div.classList.add("msg", sender === "user" ? "user-msg" : "bot-msg");
     div.textContent = text;
+
+    const timeEl = document.createElement("span");
+    timeEl.className = "msg-time";
+    const d = timestamp ? new Date(timestamp) : new Date();
+    timeEl.textContent = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true });
 
     if (sender === "bot") {
       const avatarImg = document.createElement("img");
@@ -1705,12 +1723,19 @@ function openProfile(key) {
           setTimeout(() => { copyBtn.textContent = "Copy"; }, 1500);
         }).catch(() => {});
       });
-      wrapper.appendChild(copyBtn);
-
+      const botMeta = document.createElement("div");
+      botMeta.className = "bot-meta";
+      botMeta.appendChild(timeEl);
+      botMeta.appendChild(copyBtn);
+      wrapper.appendChild(botMeta);
       row.appendChild(avatarImg);
       row.appendChild(wrapper);
     } else {
-      row.appendChild(div);
+      const userWrapper = document.createElement("div");
+      userWrapper.style.cssText = "display:flex;flex-direction:column;align-items:flex-end;max-width:min(72%,calc(100% - 8px));";
+      userWrapper.appendChild(div);
+      userWrapper.appendChild(timeEl);
+      row.appendChild(userWrapper);
     }
 
     chatLog.appendChild(row);
@@ -1804,7 +1829,7 @@ function openProfile(key) {
     if (chat.messages.length === 0) chat.title = message.slice(0, 40);
 
     addMessage(message, "user", chat.persona);
-    chat.messages.push({ role: "user", content: message });
+    chat.messages.push({ role: "user", content: message, ts: Date.now() });
     saveChats(); renderChatList();
 
     userInput.value = "";
@@ -1872,7 +1897,7 @@ function openProfile(key) {
       }
 
       if (fullReply) {
-        chat.messages.push({ role: "assistant", content: fullReply });
+        chat.messages.push({ role: "assistant", content: fullReply, ts: Date.now() });
         saveChats();
       }
 
