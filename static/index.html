@@ -330,24 +330,9 @@
     opacity: 0.16; will-change: transform; transform: translateZ(0);
     transition: background 0.4s ease;
   }
-  .glow-1 { width:46vw; height:46vw; max-width:560px; max-height:560px; background:var(--accent-1); top:-12vw; left:5vw; animation:drift1 28s ease-in-out infinite; }
-  .glow-2 { width:38vw; height:38vw; max-width:460px; max-height:460px; background:var(--accent-2); bottom:-10vw; right:0; animation:drift2 34s ease-in-out infinite; }
-  @keyframes drift1 { 0%,100%{transform:translate3d(0,0,0)} 50%{transform:translate3d(3vw,4vw,0)} }
-  @keyframes drift2 { 0%,100%{transform:translate3d(0,0,0)} 50%{transform:translate3d(-3vw,-2vw,0)} }
-  .stars {
-    position: absolute; inset: 0; opacity: 0.55;
-    background-image:
-      radial-gradient(1px 1px at 8% 12%,rgba(255,255,255,0.5),transparent),
-      radial-gradient(1px 1px at 22% 30%,rgba(255,255,255,0.35),transparent),
-      radial-gradient(1px 1px at 38% 8%,rgba(255,255,255,0.4),transparent),
-      radial-gradient(1px 1px at 55% 22%,rgba(255,255,255,0.3),transparent),
-      radial-gradient(1px 1px at 68% 45%,rgba(255,255,255,0.35),transparent),
-      radial-gradient(1px 1px at 82% 15%,rgba(255,255,255,0.25),transparent),
-      radial-gradient(1px 1px at 92% 60%,rgba(255,255,255,0.35),transparent),
-      radial-gradient(1px 1px at 15% 70%,rgba(255,255,255,0.3),transparent),
-      radial-gradient(1px 1px at 45% 85%,rgba(255,255,255,0.25),transparent),
-      radial-gradient(1px 1px at 75% 90%,rgba(255,255,255,0.3),transparent);
-  }
+  .glow-1 { display:none; }
+  .glow-2 { display:none; }
+  .stars { display: none; }
   @media (prefers-reduced-motion: reduce) { .glow { animation: none; } }
   @media (max-width: 760px) { .glow { animation: none; } }
 
@@ -1283,12 +1268,186 @@
     </div>
   </div>
     <div class="ambient">
-    <div class="glow glow-1"></div>
-    <div class="glow glow-2"></div>
-    <div class="stars"></div>
+    <canvas id="galaxy-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;"></canvas>
   </div>
 
   <div id="sidebar-overlay"></div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('galaxy-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let W, H, DPR;
+  let animId = null;
+
+  // Persona color map
+  const PERSONA_COLORS = {
+    direct:    { a: [91,141,239],  b: [111,227,214] },
+    companion: { a: [240,163,91],  b: [242,102,125] },
+    business:  { a: [31,166,121],  b: [91,201,217]  },
+    life:      { a: [155,127,232], b: [199,146,234] }
+  };
+
+  function getPersona() {
+    return document.body.getAttribute('data-persona') || 'direct';
+  }
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = canvas.offsetWidth * DPR;
+    H = canvas.offsetHeight * DPR;
+    canvas.width  = W;
+    canvas.height = H;
+  }
+
+  // Static stars
+  const STAR_COUNT = 180;
+  const stars = [];
+  function initStars() {
+    stars.length = 0;
+    for (let i = 0; i < STAR_COUNT; i++) {
+      stars.push({
+        x: Math.random(),
+        y: Math.random(),
+        r: 0.3 + Math.random() * 0.9,
+        o: 0.15 + Math.random() * 0.55,
+        twinkleSpeed: 0.003 + Math.random() * 0.006,
+        twinkleOffset: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  // Shooting stars
+  const MAX_SHOOTERS = 2;
+  const shooters = [];
+  let lastShooterTime = 0;
+  const SHOOTER_INTERVAL = 3500; // ms between spawns
+
+  function spawnShooter() {
+    // Random start from top or sides
+    const edge = Math.random();
+    let sx, sy, angle;
+    if (edge < 0.6) {
+      sx = Math.random() * W;
+      sy = 0;
+      angle = (Math.PI / 6) + Math.random() * (Math.PI / 4);
+    } else {
+      sx = 0;
+      sy = Math.random() * H * 0.5;
+      angle = -Math.PI / 12 + Math.random() * (Math.PI / 6);
+    }
+    shooters.push({
+      x: sx, y: sy,
+      angle,
+      speed: (2.5 + Math.random() * 2.5) * DPR,
+      length: (80 + Math.random() * 120) * DPR,
+      life: 1.0,
+      decay: 0.012 + Math.random() * 0.01
+    });
+  }
+
+  let t = 0;
+  function draw(ts) {
+    if (!animId) return;
+    t += 0.016;
+    ctx.clearRect(0, 0, W, H);
+
+    const persona = getPersona();
+    const colors = PERSONA_COLORS[persona] || PERSONA_COLORS.direct;
+    const [r1,g1,b1] = colors.a;
+    const [r2,g2,b2] = colors.b;
+
+    // Subtle gradient nebula background
+    const grad = ctx.createRadialGradient(W*0.3, H*0.25, 0, W*0.5, H*0.5, W*0.85);
+    grad.addColorStop(0,   `rgba(${r1},${g1},${b1},0.07)`);
+    grad.addColorStop(0.5, `rgba(${r2},${g2},${b2},0.04)`);
+    grad.addColorStop(1,   'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Second soft glow opposite corner
+    const grad2 = ctx.createRadialGradient(W*0.8, H*0.8, 0, W*0.8, H*0.8, W*0.6);
+    grad2.addColorStop(0,   `rgba(${r2},${g2},${b2},0.06)`);
+    grad2.addColorStop(1,   'rgba(0,0,0,0)');
+    ctx.fillStyle = grad2;
+    ctx.fillRect(0, 0, W, H);
+
+    // Static twinkling stars
+    for (let i = 0; i < stars.length; i++) {
+      const s = stars[i];
+      const twinkle = s.o * (0.6 + 0.4 * Math.sin(t * s.twinkleSpeed * 60 + s.twinkleOffset));
+      ctx.beginPath();
+      ctx.arc(s.x * W, s.y * H, s.r * DPR, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${twinkle})`;
+      ctx.fill();
+    }
+
+    // Shooting stars
+    if (ts - lastShooterTime > SHOOTER_INTERVAL && shooters.length < MAX_SHOOTERS) {
+      spawnShooter();
+      lastShooterTime = ts;
+    }
+
+    for (let i = shooters.length - 1; i >= 0; i--) {
+      const sh = shooters[i];
+      sh.x += Math.cos(sh.angle) * sh.speed;
+      sh.y += Math.sin(sh.angle) * sh.speed;
+      sh.life -= sh.decay;
+
+      if (sh.life <= 0 || sh.x > W + 50 || sh.y > H + 50) {
+        shooters.splice(i, 1);
+        continue;
+      }
+
+      const tailX = sh.x - Math.cos(sh.angle) * sh.length * sh.life;
+      const tailY = sh.y - Math.sin(sh.angle) * sh.length * sh.life;
+
+      const sg = ctx.createLinearGradient(tailX, tailY, sh.x, sh.y);
+      sg.addColorStop(0, 'rgba(255,255,255,0)');
+      sg.addColorStop(0.7, `rgba(${r1},${g1},${b1},${sh.life * 0.5})`);
+      sg.addColorStop(1, `rgba(255,255,255,${sh.life * 0.9})`);
+
+      ctx.beginPath();
+      ctx.moveTo(tailX, tailY);
+      ctx.lineTo(sh.x, sh.y);
+      ctx.strokeStyle = sg;
+      ctx.lineWidth = 1.2 * DPR * sh.life;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      // Tip glow
+      ctx.beginPath();
+      ctx.arc(sh.x, sh.y, 1.5 * DPR * sh.life, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${sh.life * 0.9})`;
+      ctx.fill();
+    }
+
+    animId = requestAnimationFrame(draw);
+  }
+
+  function start() {
+    if (animId) return;
+    resize();
+    initStars();
+    animId = requestAnimationFrame(draw);
+  }
+
+  function stop() {
+    if (animId) { cancelAnimationFrame(animId); animId = null; }
+  }
+
+  // Respond to reduced motion
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  window.addEventListener('resize', () => { resize(); initStars(); });
+  document.addEventListener('visibilitychange', () => {
+    document.hidden ? stop() : start();
+  });
+
+  start();
+})();
+</script>
 
   <div id="sidebar">
     <button id="new-chat-btn">+ New chat</button>
