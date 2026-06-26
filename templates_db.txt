@@ -1,0 +1,25 @@
+See all accounts:
+python3 -c "
+import sqlite3
+conn = sqlite3.connect('/home/dabdul/mychatbot/selina.db')
+conn.row_factory = sqlite3.Row
+users = conn.execute('SELECT id, username FROM users').fetchall()
+for u in users:
+    print(f'ID: {u[\"id\"]} | Username: {u[\"username\"]}')
+print(f'Total: {len(users)}')
+conn.close()
+"
+
+
+Reset a password:
+python3 -c "
+import sqlite3, hashlib
+username = 'PUT_USERNAME_HERE'
+new_pass = 'PUT_NEW_PASSWORD_HERE'
+new_hash = hashlib.sha256(new_pass.encode()).hexdigest()
+conn = sqlite3.connect('/home/dabdul/mychatbot/selina.db')
+conn.execute('UPDATE users SET password_hash = ? WHERE username = ?', (new_hash, username))
+conn.commit()
+conn.close()
+print('Done — password changed for:', username)
+"
