@@ -35,6 +35,8 @@ key_cycle = cycle(GROQ_API_KEYS)
 client = Groq(api_key=next(key_cycle))
 
 app.secret_key = os.getenv("SECRET_KEY", "fallback-secret-change-this")
+from datetime import timedelta
+app.permanent_session_lifetime = timedelta(days=30)
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SECURE"] = True
@@ -75,8 +77,21 @@ def init_db():
 
 init_db()
 
+from werkzeug.security import generate_password_hash, check_password_hash
+
 def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
+    return generate_password_hash(password)
+
+def verify_password(password, password_hash):
+    # Support both old SHA-256 hashes (plain 64-char hex) and
+    # new werkzeug hashes (prefixed with scrypt:/pbkdf2: etc.)
+    # This lets existing accounts log in without forcing re-registration
+    if len(password_hash) == 64 and all(c in '0123456789abcdef' for c in password_hash):
+        # Old SHA-256 hash — compare directly
+        import hashlib
+        return hashlib.sha256(password.encode()).hexdigest() == password_hash
+    # New werkzeug hash
+    return check_password_hash(password_hash, password)
 
 def login_required(f):
     @wraps(f)
@@ -208,6 +223,7 @@ def register():
                          (username, hash_password(password)))
             conn.commit()
             user = conn.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
+            session.permanent = True
             session["user_id"] = user["id"]
             session["username"] = username
         return jsonify({"ok": True, "username": username})
@@ -220,10 +236,11 @@ def login():
     username = (data.get("username") or "").strip().lower()
     password = data.get("password") or ""
     with get_db() as conn:
-        user = conn.execute("SELECT * FROM users WHERE username = ? AND password_hash = ?",
-                            (username, hash_password(password))).fetchone()
-    if not user:
+        user = conn.execute("SELECT * FROM users WHERE username = ?",
+                            (username,)).fetchone()
+    if not user or not verify_password(password, user["password_hash"]):
         return jsonify({"error": "Invalid username or password"}), 401
+    session.permanent = True
     session["user_id"] = user["id"]
     session["username"] = user["username"]
     return jsonify({"ok": True, "username": user["username"]})
@@ -398,11 +415,13 @@ def summarize():
     if len(history) < 6:
         return jsonify({"summary": ""})
     try:
+        clean = [{"role": m["role"], "content": m["content"]} for m in history[-30:]]
         resp = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[
-                {"role": "system", "content": "Summarize this conversation in 3-5 sentences. Focus only on key facts, names, decisions, and topics. Be concise. Do not editorialize."},
-                *history[-30:]
+                {"role": "system",
+                 "content": "Summarize this conversation in 3-5 sentences. Focus only on key facts, names, decisions, and topics. Be concise. Do not editorialize."},
+                *clean
             ],
             temperature=0.3,
             max_tokens=200

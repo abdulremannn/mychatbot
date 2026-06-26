@@ -691,13 +691,13 @@
   @keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:1} }
 
   .bot-meta {
-    display: flex; align-items: center; gap: 6px;
-    margin-top: 3px;
+    display: flex; align-items: center; gap: 5px;
+    margin-top: 4px;
   }
   .copy-btn {
     background: none; border: none; color: var(--text-faint);
-    font-size: 9.5px; cursor: pointer; padding: 0;
-    border-radius: 4px; opacity: 0;
+    font-size: 9.5px; font-family: inherit; cursor: pointer; padding: 0;
+    opacity: 0; line-height: 1;
     transition: opacity 0.12s ease, color 0.12s ease;
     white-space: nowrap;
   }
@@ -880,11 +880,10 @@
 
 .msg-time {
     font-size: 9.5px; color: var(--text-faint);
-    display: block; white-space: nowrap;
-    margin-top: 4px;
+    white-space: nowrap; display: block;
   }
-  .row.user .msg-time { text-align: right; }
-  .row.bot  .msg-time { text-align: left; padding-left: 2px; }
+  .row.user .msg-time { text-align: right; margin-top: 4px; }
+  .row.bot  .msg-time { text-align: left; }
 
   /* ── Reduced motion ── */
   @media (prefers-reduced-motion: reduce) {
@@ -2005,7 +2004,10 @@ function openProfile(key) {
   async function handleAuth() {
     const username = authUsername.value.trim();
     const password = authPassword.value.trim();
-    if (!username || !password) { authError.textContent = "Fill in both fields."; return; }
+    authUsername.classList.remove("error");
+    authPassword.classList.remove("error");
+    if (!username) { authError.textContent = "Fill in both fields."; authUsername.classList.add("error"); return; }
+    if (!password) { authError.textContent = "Fill in both fields."; authPassword.classList.add("error"); return; }
     authSubmit.disabled = true;
     authError.textContent = "";
     try {
@@ -2015,7 +2017,12 @@ function openProfile(key) {
         body: JSON.stringify({ username, password })
       });
       const data = await res.json();
-      if (!res.ok) { authError.textContent = data.error || "Something went wrong."; return; }
+      if (!res.ok) {
+        authError.textContent = data.error || "Something went wrong.";
+        authUsername.classList.add("error");
+        authPassword.classList.add("error");
+        return;
+      }
       await loadUserChats(data.username);
     } catch(e) {
       authError.textContent = "Connection error.";
